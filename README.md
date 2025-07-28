@@ -35,8 +35,8 @@ A powerful Django web application that converts YouTube videos into structured o
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/coursegen-ai.git
-cd coursegen-ai
+git clone https://github.com/ibiiziiy/coursegen.git
+cd coursegen
 ```
 
 ### 2. Backend Setup
@@ -137,7 +137,7 @@ cd frontend && npm start
 ## 📁 Project Structure
 
 ```
-coursegen-ai/
+coursegen/
 ├── coursegen/              # Django project settings
 ├── courses/               # Main Django app
 │   ├── models.py         # Database models
