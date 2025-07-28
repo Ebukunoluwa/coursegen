@@ -35,7 +35,7 @@ A powerful Django web application that converts YouTube videos into structured o
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/ibiiziiy/coursegen.git
+git clone https://github.com/Ebukunoluwa/coursegen.git
 cd coursegen
 ```
 
