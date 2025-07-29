@@ -272,6 +272,47 @@ class YouTubeService:
         
         return None
     
+    def search_youtube_videos(self, search_term, max_results=5):
+        """Search for YouTube videos using the Data API"""
+        if not self.api_key:
+            return []
+            
+        try:
+            url = "https://www.googleapis.com/youtube/v3/search"
+            params = {
+                'part': 'snippet',
+                'q': search_term,
+                'type': 'video',
+                'maxResults': max_results,
+                'order': 'relevance',
+                'videoDuration': 'medium',  # 4-20 minutes
+                'videoDefinition': 'high',  # HD videos
+                'key': self.api_key
+            }
+            
+            response = requests.get(url, params=params, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                videos = []
+                
+                for item in data.get('items', []):
+                    video_info = {
+                        'video_id': item['id']['videoId'],
+                        'title': item['snippet']['title'],
+                        'description': item['snippet']['description'],
+                        'channel_title': item['snippet']['channelTitle'],
+                        'published_at': item['snippet']['publishedAt'],
+                        'thumbnail': item['snippet']['thumbnails']['medium']['url']
+                    }
+                    videos.append(video_info)
+                    
+                return videos
+                
+        except Exception as e:
+            print(f"Error searching YouTube videos: {e}")
+            
+        return []
+    
     def extract_chapters_from_description(self, description):
         """Extract chapters from video description"""
         chapters = []
@@ -546,10 +587,10 @@ class AIService:
         - Design appropriate pacing for {difficulty} level
         
         6. YOUTUBE CONTENT CURATION:
-        - For each lesson, suggest relevant YouTube video IDs or search terms
-        - Ensure content quality and teaching effectiveness
-        - Balance different explanation approaches for varied learning styles
+        - For each lesson, provide specific YouTube search terms to find relevant videos
+        - Focus on high-quality educational content from reputable channels
         - Include both theoretical and practical content
+        - Suggest search terms that will find videos with good explanations
         
         7. ASSESSMENT INTEGRATION:
         - Plan quiz placement for optimal retention
@@ -571,17 +612,20 @@ class AIService:
                             "description": "Lesson description",
                             "type": "video",
                             "duration": 1800,
-                            "youtube_video_id": "suggested_video_id_or_search_term",
+                            "youtube_search_term": "specific search term for this lesson",
                             "chapter_timestamp": "00:00",
                             "video_info": {{
-                                "title": "Suggested video title",
-                                "description": "Video description"
+                                "title": "Expected video title",
+                                "description": "Expected video description"
                             }}
                         }}
                     ]
                 }}
             ]
         }}
+        
+        For YouTube search terms, use specific, targeted terms that will find high-quality educational videos.
+        Examples: "python for beginners tutorial", "machine learning basics explained", "data science fundamentals"
         
         Ensure the course is comprehensive, well-structured, and suitable for {difficulty} level learners.
         """
@@ -1017,7 +1061,7 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
                             "description": "Introduction to the subject matter",
                             "type": "video",
                             "duration": 1800,
-                            "youtube_video_id": "dQw4w9WgXcQ",
+                            "youtube_search_term": f"{prompt} for beginners tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Introduction Video",
@@ -1029,7 +1073,7 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
                             "description": "Understanding fundamental principles",
                             "type": "video",
                             "duration": 2400,
-                            "youtube_video_id": "dQw4w9WgXcQ",
+                            "youtube_search_term": f"{prompt} fundamentals explained",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Core Concepts Video",
@@ -1047,7 +1091,7 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
                             "description": "Moving beyond basics",
                             "type": "video",
                             "duration": 2100,
-                            "youtube_video_id": "dQw4w9WgXcQ",
+                            "youtube_search_term": f"{prompt} advanced techniques tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Advanced Techniques Video",
@@ -1059,7 +1103,7 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
                             "description": "Real-world implementation",
                             "type": "video",
                             "duration": 2700,
-                            "youtube_video_id": "dQw4w9WgXcQ",
+                            "youtube_search_term": f"{prompt} practical examples tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Practical Applications Video",
@@ -1077,7 +1121,7 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
                             "description": "Professional-level skills",
                             "type": "video",
                             "duration": 3000,
-                            "youtube_video_id": "dQw4w9WgXcQ",
+                            "youtube_search_term": f"{prompt} expert level tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Expert Techniques Video",
@@ -1089,7 +1133,7 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
                             "description": "Comprehensive project to demonstrate mastery",
                             "type": "video",
                             "duration": 3600,
-                            "youtube_video_id": "dQw4w9WgXcQ",
+                            "youtube_search_term": f"{prompt} complete project tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Final Project Video",
@@ -1750,21 +1794,46 @@ class CourseGenerationService:
             )
             
             for j, lesson_data in enumerate(module_data.get('lessons', [])):
+                # Search for YouTube videos for this lesson
+                youtube_video_id = None
+                video_info = lesson_data.get('video_info', {})
+                
+                if lesson_data.get('type') == 'video':
+                    search_term = lesson_data.get('youtube_search_term', lesson_data['title'])
+                    print(f"Searching for videos with term: {search_term}")
+                    
+                    # Search for relevant YouTube videos
+                    videos = self.youtube_service.search_youtube_videos(search_term, max_results=3)
+                    
+                    if videos:
+                        # Use the first (most relevant) video
+                        selected_video = videos[0]
+                        youtube_video_id = selected_video['video_id']
+                        video_info = {
+                            'title': selected_video['title'],
+                            'description': selected_video['description'],
+                            'channel_title': selected_video['channel_title'],
+                            'thumbnail': selected_video['thumbnail']
+                        }
+                        print(f"Found video: {selected_video['title']} (ID: {youtube_video_id})")
+                    else:
+                        print(f"No videos found for search term: {search_term}")
+                
                 lesson = Lesson.objects.create(
                     module=module,
                     title=lesson_data['title'],
                     lesson_type=lesson_data.get('type', 'video'),
                     duration=lesson_data.get('duration', 0),
                     order=j,
-                    youtube_video_id=lesson_data.get('youtube_video_id'),
+                    youtube_video_id=youtube_video_id,
                     chapter_timestamp=lesson_data.get('chapter_timestamp', '')
                 )
                 
                 # Generate study notes for each lesson
-                if lesson.lesson_type == 'video':
+                if lesson.lesson_type == 'video' and youtube_video_id:
                     study_notes = self.ai_service.generate_structured_study_notes(
                         lesson.title,
-                        video_info=lesson_data.get('video_info')
+                        video_info=video_info
                     )
                     
                     StudyNote.objects.create(
