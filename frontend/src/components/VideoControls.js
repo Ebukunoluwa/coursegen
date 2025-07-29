@@ -416,35 +416,50 @@ const VideoControls = ({ videoId, timestamp, onTimeUpdate }) => {
         const newTime = Math.max(0, currentTime - 10);
         console.log('Rewinding 10s:', { currentTime, newTime });
         
-        // Update UI immediately
+        // Update UI immediately for better responsiveness
         setCurrentTime(newTime);
         setIsSeeking(true);
         
         if (currentPlayer && typeof currentPlayer.seekTo === 'function') {
           currentPlayer.seekTo(newTime, true);
           console.log('Rewind command sent to player');
+          
+          // Enhanced verification with fallback
+          setTimeout(() => {
+            try {
+              const currentPlayer = playerRef.current || player;
+              if (currentPlayer && currentPlayer.getCurrentTime) {
+                const actualTime = currentPlayer.getCurrentTime();
+                console.log('Actual time after rewind:', actualTime);
+                setCurrentTime(actualTime);
+                
+                // Force update if rewind didn't work properly
+                if (Math.abs(actualTime - newTime) > 2) {
+                  console.log('Rewind may not have worked, forcing update');
+                  currentPlayer.seekTo(newTime, true);
+                  setTimeout(() => {
+                    const finalTime = currentPlayer.getCurrentTime();
+                    setCurrentTime(finalTime);
+                    setIsSeeking(false);
+                  }, 100);
+                } else {
+                  setIsSeeking(false);
+                }
+              } else {
+                setIsSeeking(false);
+              }
+            } catch (error) {
+              console.error('Error in rewind verification:', error);
+              setIsSeeking(false);
+            }
+          }, 150); // Reduced delay for better responsiveness
+          
         } else {
           console.error('Player or seekTo method not available for rewind');
           setError('Player not ready');
           setIsSeeking(false);
           return;
         }
-        
-        // Verify the seek worked
-        setTimeout(() => {
-          try {
-            const currentPlayer = playerRef.current || player;
-            if (currentPlayer && currentPlayer.getCurrentTime) {
-              const actualTime = currentPlayer.getCurrentTime();
-              console.log('Actual time after rewind:', actualTime);
-              setCurrentTime(actualTime);
-            }
-            setIsSeeking(false);
-          } catch (error) {
-            console.error('Error in rewind verification:', error);
-            setIsSeeking(false);
-          }
-        }, 200);
         
       } catch (error) {
         console.error('Error rewinding:', error);
@@ -735,7 +750,7 @@ const VideoControls = ({ videoId, timestamp, onTimeUpdate }) => {
       return;
     }
 
-    // Get click position
+    // Get click position with better precision
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const clickPercent = Math.max(0, Math.min(1, clickX / rect.width));
@@ -743,42 +758,56 @@ const VideoControls = ({ videoId, timestamp, onTimeUpdate }) => {
     
     console.log('Click details:', { clickX, rectWidth: rect.width, clickPercent, newTime, duration });
     
-    // Update UI immediately
+    // Update UI immediately for better responsiveness
     setCurrentTime(newTime);
     setIsSeeking(true);
     
-    // Force seek using multiple methods
+    // Enhanced seek with multiple fallback methods
     try {
-      // Method 1: Direct seek with immediate update
       console.log('Seeking to:', newTime, 'seconds');
       
-      // Ensure we have a valid player reference
+      // Method 1: Direct seek with immediate update
       const currentPlayer = playerRef.current || player;
       if (currentPlayer && typeof currentPlayer.seekTo === 'function') {
         currentPlayer.seekTo(newTime, true);
         console.log('Seek command sent to player');
+        
+        // Method 2: Verify and update after short delay
+        setTimeout(() => {
+          try {
+            const currentPlayer = playerRef.current || player;
+            if (currentPlayer && currentPlayer.getCurrentTime) {
+              const actualTime = currentPlayer.getCurrentTime();
+              console.log('Actual time after seek:', actualTime);
+              setCurrentTime(actualTime);
+              
+              // Method 3: Force update if seek didn't work
+              if (Math.abs(actualTime - newTime) > 2) {
+                console.log('Seek may not have worked, forcing update');
+                currentPlayer.seekTo(newTime, true);
+                setTimeout(() => {
+                  const finalTime = currentPlayer.getCurrentTime();
+                  setCurrentTime(finalTime);
+                  setIsSeeking(false);
+                }, 100);
+              } else {
+                setIsSeeking(false);
+              }
+            } else {
+              setIsSeeking(false);
+            }
+          } catch (error) {
+            console.error('Error in seek verification:', error);
+            setIsSeeking(false);
+          }
+        }, 150); // Reduced delay for better responsiveness
+        
       } else {
         console.error('Player or seekTo method not available');
         setError('Player not ready');
         setIsSeeking(false);
         return;
       }
-      
-      // Method 2: Force update after a short delay
-      setTimeout(() => {
-        try {
-          const currentPlayer = playerRef.current || player;
-          if (currentPlayer && currentPlayer.getCurrentTime) {
-            const actualTime = currentPlayer.getCurrentTime();
-            console.log('Actual time after seek:', actualTime);
-            setCurrentTime(actualTime);
-          }
-          setIsSeeking(false);
-        } catch (error) {
-          console.error('Error in delayed seek update:', error);
-          setIsSeeking(false);
-        }
-      }, 200); // Increased delay for better reliability
       
     } catch (error) {
       console.error('Seek error:', error);
@@ -882,44 +911,56 @@ const VideoControls = ({ videoId, timestamp, onTimeUpdate }) => {
 
       {/* Compact Controls */}
       <div className="bg-gray-900 p-3 rounded-lg">
-        {/* Progress Bar - Clickable */}
+        {/* Enhanced Progress Bar - Fully Interactive */}
         <div 
-          className="relative h-2 bg-gray-700 rounded-full mb-3 cursor-pointer hover:bg-gray-600 transition-colors duration-200 border-2 border-transparent hover:border-primary-300"
+          className="relative h-3 bg-gray-700 rounded-full mb-3 cursor-pointer hover:bg-gray-600 transition-all duration-200 border-2 border-transparent hover:border-primary-300 group"
           onClick={(e) => {
             console.log('PROGRESS BAR CLICKED!');
             handleProgressBarClick(e);
           }}
-          title="Click to seek to position"
+          title="Click anywhere to seek to position"
           style={{ 
             pointerEvents: 'auto',
             userSelect: 'none',
             WebkitUserSelect: 'none'
           }}
         >
-          {/* Progress fill */}
+          {/* Progress fill with enhanced styling */}
           <div
-            className={`absolute h-full bg-primary-500 rounded-full transition-all duration-200 ${
-              isSeeking ? 'bg-primary-400' : ''
+            className={`absolute h-full bg-gradient-to-r from-primary-500 to-primary-600 rounded-full transition-all duration-200 ${
+              isSeeking ? 'bg-gradient-to-r from-primary-400 to-primary-500 scale-105' : ''
             }`}
             style={{ width: `${(currentTime / duration) * 100}%` }}
           ></div>
           
-          {/* Progress thumb */}
+          {/* Enhanced progress thumb with better visibility */}
           <div 
-            className={`absolute top-1/2 transform -translate-y-1/2 w-3 h-3 bg-primary-500 rounded-full shadow-lg transition-all duration-200 ${
-              isSeeking ? 'opacity-100 scale-110' : 'opacity-0 hover:opacity-100'
+            className={`absolute top-1/2 transform -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg transition-all duration-200 border-2 border-primary-500 ${
+              isSeeking ? 'opacity-100 scale-125' : 'opacity-0 group-hover:opacity-100'
             }`}
-            style={{ left: `${(currentTime / duration) * 100}%`, marginLeft: '-6px' }}
+            style={{ left: `${(currentTime / duration) * 100}%`, marginLeft: '-8px' }}
           ></div>
           
-          {/* Click overlay for better responsiveness */}
+          {/* Hover indicator for better UX */}
           <div 
-            className="absolute inset-0 bg-transparent"
+            className="absolute inset-0 bg-transparent hover:bg-white hover:bg-opacity-10 rounded-full transition-all duration-200"
             onClick={(e) => {
-              console.log('OVERLAY CLICKED!');
+              console.log('HOVER OVERLAY CLICKED!');
               handleProgressBarClick(e);
             }}
           ></div>
+          
+          {/* Time tooltip on hover */}
+          <div 
+            className="absolute bottom-full mb-2 px-2 py-1 bg-black bg-opacity-90 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
+            style={{ 
+              left: `${(currentTime / duration) * 100}%`, 
+              transform: 'translateX(-50%)',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {formatTime(currentTime)} / {formatTime(duration)}
+          </div>
         </div>
 
         {/* Time Display and Controls */}

@@ -273,40 +273,80 @@ class YouTubeService:
         return None
     
     def search_youtube_videos(self, search_term, max_results=5):
-        """Search for YouTube videos using the Data API"""
+        """Search for YouTube videos using the Data API with enhanced filtering"""
         if not self.api_key:
             return []
             
         try:
-            url = "https://www.googleapis.com/youtube/v3/search"
-            params = {
-                'part': 'snippet',
-                'q': search_term,
-                'type': 'video',
-                'maxResults': max_results,
-                'order': 'relevance',
-                'videoDuration': 'medium',  # 4-20 minutes
-                'videoDefinition': 'high',  # HD videos
-                'key': self.api_key
-            }
+            # Enhanced search with multiple strategies
+            search_strategies = [
+                # Strategy 1: Exact search term
+                search_term,
+                # Strategy 2: Add "tutorial" for better educational content
+                f"{search_term} tutorial",
+                # Strategy 3: Add "explained" for detailed explanations
+                f"{search_term} explained",
+                # Strategy 4: Add "complete guide" for comprehensive content
+                f"{search_term} complete guide"
+            ]
             
-            response = requests.get(url, params=params, timeout=10)
-            if response.status_code == 200:
-                data = response.json()
-                videos = []
+            all_videos = []
+            
+            for strategy in search_strategies:
+                url = "https://www.googleapis.com/youtube/v3/search"
+                params = {
+                    'part': 'snippet',
+                    'q': strategy,
+                    'type': 'video',
+                    'maxResults': max_results,
+                    'order': 'relevance',
+                    'videoDuration': 'medium',  # 4-20 minutes for good content
+                    'videoDefinition': 'high',  # HD videos
+                    'key': self.api_key
+                }
                 
-                for item in data.get('items', []):
-                    video_info = {
-                        'video_id': item['id']['videoId'],
-                        'title': item['snippet']['title'],
-                        'description': item['snippet']['description'],
-                        'channel_title': item['snippet']['channelTitle'],
-                        'published_at': item['snippet']['publishedAt'],
-                        'thumbnail': item['snippet']['thumbnails']['medium']['url']
-                    }
-                    videos.append(video_info)
+                response = requests.get(url, params=params, timeout=15)
+                if response.status_code == 200:
+                    data = response.json()
                     
-                return videos
+                    for item in data.get('items', []):
+                        video_info = {
+                            'video_id': item['id']['videoId'],
+                            'title': item['snippet']['title'],
+                            'description': item['snippet']['description'],
+                            'channel_title': item['snippet']['channelTitle'],
+                            'published_at': item['snippet']['publishedAt'],
+                            'thumbnail': item['snippet']['thumbnails']['medium']['url'],
+                            'search_strategy': strategy
+                        }
+                        all_videos.append(video_info)
+                        
+            # Remove duplicates based on video_id
+            seen_videos = set()
+            unique_videos = []
+            
+            for video in all_videos:
+                if video['video_id'] not in seen_videos:
+                    seen_videos.add(video['video_id'])
+                    unique_videos.append(video)
+            
+            # Sort by relevance (exact matches first, then tutorial, explained, complete guide)
+            def relevance_score(video):
+                strategy = video.get('search_strategy', '')
+                if strategy == search_term:
+                    return 4
+                elif 'tutorial' in strategy:
+                    return 3
+                elif 'explained' in strategy:
+                    return 2
+                elif 'complete guide' in strategy:
+                    return 1
+                return 0
+            
+            unique_videos.sort(key=relevance_score, reverse=True)
+            
+            # Return top results
+            return unique_videos[:max_results]
                 
         except Exception as e:
             print(f"Error searching YouTube videos: {e}")
@@ -552,67 +592,86 @@ class AIService:
             self._cache[cache_key] = result
             return result
             
-        # Comprehensive prompt for detailed course generation
+        # ULTRA-COMPREHENSIVE prompt for detailed course generation
         prompt_text = f"""
-        Create a comprehensive learning course for: "{prompt}"
+        Create a COMPREHENSIVE and DETAILED learning course for: "{prompt}"
         Difficulty Level: {difficulty}
         
-        Follow this detailed process:
+        This course must cover EVERY SINGLE ASPECT of the subject matter in depth. Leave no stone unturned.
         
-        1. TOPIC ANALYSIS:
-        - Parse the learning intent and identify core subject matter
+        Follow this ULTRA-DETAILED process:
+        
+        1. DEEP TOPIC ANALYSIS:
+        - Parse the learning intent and identify ALL core subject matter components
         - Extract skill level indicators and specific learning goals
-        - Identify prerequisite concepts and logical learning progression
+        - Identify ALL prerequisite concepts and logical learning progression
+        - Map out the ENTIRE knowledge domain systematically
         
-        2. KNOWLEDGE MAPPING:
-        - Break down the main topic into prerequisite concepts
-        - Map concept dependencies (what must be learned before what)
-        - Design appropriate skill milestones and checkpoints
+        2. COMPREHENSIVE KNOWLEDGE MAPPING:
+        - Break down the main topic into EVERY prerequisite concept
+        - Map ALL concept dependencies (what must be learned before what)
+        - Design detailed skill milestones and checkpoints
+        - Identify ALL sub-topics, techniques, tools, and methodologies
+        - Include both theoretical foundations and practical applications
         
-        3. CONTENT STRATEGY:
+        3. EXHAUSTIVE CONTENT STRATEGY:
         - Plan optimal learning sequence based on concept difficulty
-        - Identify potential knowledge gaps that need filling
-        - Design assessment points and practical applications
+        - Identify ALL potential knowledge gaps that need filling
+        - Design comprehensive assessment points and practical applications
+        - Include real-world examples, case studies, and industry best practices
+        - Cover both beginner fundamentals and advanced techniques
         
-        4. COURSE STRUCTURE:
-        - Group related concepts into logical modules (4-6 modules)
-        - Ensure each module has clear learning objectives
+        4. DETAILED COURSE STRUCTURE:
+        - Group related concepts into logical modules (6-8 modules for comprehensive coverage)
+        - Ensure each module has CLEAR and DETAILED learning objectives
         - Balance module length and complexity
         - Create smooth transitions between modules
+        - Include both theoretical and practical modules
         
-        5. LESSON PLANNING:
-        - Break modules into digestible lesson chunks (3-5 lessons per module)
+        5. GRANULAR LESSON PLANNING:
+        - Break modules into detailed lesson chunks (4-6 lessons per module)
         - Sequence lessons for optimal knowledge building
-        - Plan mix of theory, examples, and practical application
+        - Plan mix of theory, examples, practical application, and hands-on projects
         - Design appropriate pacing for {difficulty} level
+        - Include assessment checkpoints and review sessions
         
-        6. YOUTUBE CONTENT CURATION:
-        - For each lesson, provide specific YouTube search terms to find relevant videos
+        6. PRECISE YOUTUBE CONTENT CURATION:
+        - For each lesson, provide SPECIFIC and TARGETED YouTube search terms
         - Focus on high-quality educational content from reputable channels
         - Include both theoretical and practical content
-        - Suggest search terms that will find videos with good explanations
+        - Suggest search terms that will find videos with EXCELLENT explanations
+        - Ensure videos cover the EXACT topic being taught
+        - Include multiple search variations to find the best content
         
-        7. ASSESSMENT INTEGRATION:
+        7. COMPREHENSIVE ASSESSMENT INTEGRATION:
         - Plan quiz placement for optimal retention
         - Design varied question types per topic
         - Create progressive difficulty in assessments
         - Plan final projects or practical applications
+        - Include hands-on exercises and real-world projects
+        
+        8. DETAILED CONTENT REQUIREMENTS:
+        - Each lesson must have a detailed description explaining what will be covered
+        - Include specific learning outcomes for each lesson
+        - Mention tools, technologies, or concepts that will be introduced
+        - Include practical applications and real-world examples
+        - Cover both theory and hands-on practice
         
         Format as JSON:
         {{
-            "title": "Professional, engaging course title (e.g., 'Complete Python Programming Masterclass', 'Digital Marketing Strategy: From Beginner to Expert')",
-            "description": "Detailed course description that explains what students will learn and achieve",
+            "title": "Professional, engaging course title that clearly communicates comprehensive coverage",
+            "description": "DETAILED course description that explains EVERYTHING students will learn and achieve",
             "modules": [
                 {{
-                    "title": "Module Title",
-                    "description": "Module description",
+                    "title": "Detailed Module Title",
+                    "description": "Comprehensive module description covering all aspects",
                     "lessons": [
                         {{
-                            "title": "Lesson Title",
-                            "description": "Lesson description",
+                            "title": "Detailed Lesson Title",
+                            "description": "Comprehensive lesson description explaining exactly what will be covered, tools used, concepts introduced, and practical applications",
                             "type": "video",
                             "duration": 1800,
-                            "youtube_search_term": "specific search term for this lesson",
+                            "youtube_search_term": "very specific search term that will find the exact video content needed",
                             "chapter_timestamp": "00:00",
                             "video_info": {{
                                 "title": "Expected video title",
@@ -624,17 +683,24 @@ class AIService:
             ]
         }}
         
-        For YouTube search terms, use specific, targeted terms that will find high-quality educational videos.
-        Examples: "python for beginners tutorial", "machine learning basics explained", "data science fundamentals"
+        For YouTube search terms, use VERY SPECIFIC and TARGETED terms that will find high-quality educational videos.
+        Examples: "python object oriented programming tutorial", "machine learning neural networks explained", "data science pandas numpy tutorial"
         
-        IMPORTANT: Create a professional, engaging course title that clearly communicates the value and scope of the course.
-        Examples of good titles:
-        - "Complete Python Programming Masterclass: From Beginner to Advanced"
-        - "Digital Marketing Strategy: From Beginner to Expert"
-        - "Data Science Fundamentals: Master Analytics & Machine Learning"
-        - "Web Development Bootcamp: Full-Stack Mastery"
+        IMPORTANT: 
+        - Create a professional, engaging course title that clearly communicates COMPREHENSIVE coverage
+        - Each lesson description must be DETAILED and explain exactly what will be learned
+        - YouTube search terms must be SPECIFIC to find the exact content needed
+        - Cover EVERY aspect of the subject matter - leave nothing out
+        - Include both theoretical foundations and practical applications
+        - Ensure videos are highly relevant to the specific lesson content
         
-        Ensure the course is comprehensive, well-structured, and suitable for {difficulty} level learners.
+        Examples of comprehensive titles:
+        - "Complete Python Programming Masterclass: From Beginner to Advanced with Real Projects"
+        - "Digital Marketing Strategy: Complete Guide from Fundamentals to Expert Level"
+        - "Data Science Fundamentals: Master Analytics, Machine Learning & AI Applications"
+        - "Web Development Bootcamp: Full-Stack Mastery with Modern Technologies"
+        
+        Ensure the course is COMPREHENSIVE, DETAILED, and covers EVERY SINGLE ASPECT of the subject matter for {difficulty} level learners.
         """
         
         try:
@@ -1172,94 +1238,172 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
         
         return {
             "title": title,
-            "description": f"Comprehensive {prompt} course designed for {difficulty} level learners. Master essential concepts, practical applications, and advanced techniques through structured learning modules with real-world examples and hands-on projects.",
+            "description": f"COMPREHENSIVE {prompt} course designed for {difficulty} level learners. This detailed course covers EVERY aspect of the subject matter, from fundamental concepts to advanced techniques. Students will master essential principles, practical applications, real-world examples, industry best practices, and hands-on projects through structured learning modules with comprehensive assessments and expert guidance.",
             "modules": [
                 {
-                    "title": "Introduction to the Topic",
-                    "description": "Foundation concepts and overview",
+                    "title": "Foundation Fundamentals",
+                    "description": "Comprehensive introduction covering all basic concepts, terminology, and essential principles. This module establishes the core knowledge base required for advanced learning.",
                     "lessons": [
                         {
-                            "title": "Getting Started",
-                            "description": "Introduction to the subject matter",
+                            "title": "Complete Introduction and Overview",
+                            "description": "Comprehensive introduction to the subject matter covering all fundamental concepts, key terminology, learning objectives, and course roadmap. Students will understand the scope, importance, and practical applications of this field.",
                             "type": "video",
-                            "duration": 1800,
-                            "youtube_search_term": f"{prompt} for beginners tutorial",
+                            "duration": 2400,
+                            "youtube_search_term": f"{prompt} complete introduction tutorial for beginners",
                             "chapter_timestamp": "00:00",
                             "video_info": {
-                                "title": "Introduction Video",
-                                "description": "Basic introduction to the topic"
+                                "title": "Complete Introduction Video",
+                                "description": "Comprehensive introduction covering all fundamental concepts and learning objectives"
                             }
                         },
                         {
-                            "title": "Core Concepts",
-                            "description": "Understanding fundamental principles",
+                            "title": "Core Principles and Fundamentals",
+                            "description": "Deep dive into the core principles, fundamental concepts, and essential building blocks. Students will master the foundational knowledge required for all advanced topics and practical applications.",
                             "type": "video",
-                            "duration": 2400,
-                            "youtube_search_term": f"{prompt} fundamentals explained",
+                            "duration": 2700,
+                            "youtube_search_term": f"{prompt} core principles fundamentals explained",
                             "chapter_timestamp": "00:00",
                             "video_info": {
-                                "title": "Core Concepts Video",
-                                "description": "Deep dive into core concepts"
+                                "title": "Core Principles Video",
+                                "description": "Comprehensive coverage of fundamental principles and core concepts"
+                            }
+                        },
+                        {
+                            "title": "Essential Tools and Technologies",
+                            "description": "Comprehensive overview of all essential tools, technologies, software, and platforms used in this field. Students will learn to set up their development environment and understand industry-standard tools.",
+                            "type": "video",
+                            "duration": 2100,
+                            "youtube_search_term": f"{prompt} essential tools technologies tutorial",
+                            "chapter_timestamp": "00:00",
+                            "video_info": {
+                                "title": "Essential Tools Video",
+                                "description": "Complete guide to essential tools and technologies"
                             }
                         }
                     ]
                 },
                 {
-                    "title": "Intermediate Topics",
-                    "description": "Building on foundational knowledge",
+                    "title": "Intermediate Concepts and Techniques",
+                    "description": "Building on foundational knowledge with intermediate concepts, advanced techniques, and practical applications. This module focuses on real-world implementation and industry best practices.",
                     "lessons": [
                         {
-                            "title": "Advanced Techniques",
-                            "description": "Moving beyond basics",
+                            "title": "Advanced Techniques and Methods",
+                            "description": "Comprehensive coverage of advanced techniques, methodologies, and best practices. Students will learn sophisticated approaches and industry-standard methods for solving complex problems.",
                             "type": "video",
-                            "duration": 2100,
-                            "youtube_search_term": f"{prompt} advanced techniques tutorial",
+                            "duration": 3000,
+                            "youtube_search_term": f"{prompt} advanced techniques methods tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Advanced Techniques Video",
-                                "description": "Advanced methods and techniques"
+                                "description": "Comprehensive guide to advanced techniques and methodologies"
                             }
                         },
                         {
-                            "title": "Practical Applications",
-                            "description": "Real-world implementation",
+                            "title": "Practical Applications and Real-World Examples",
+                            "description": "Hands-on practical applications with real-world examples, case studies, and industry scenarios. Students will apply their knowledge to solve actual problems and understand practical implementation.",
                             "type": "video",
-                            "duration": 2700,
-                            "youtube_search_term": f"{prompt} practical examples tutorial",
+                            "duration": 3300,
+                            "youtube_search_term": f"{prompt} practical applications real world examples tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Practical Applications Video",
-                                "description": "Hands-on practical examples"
+                                "description": "Comprehensive practical applications with real-world examples"
+                            }
+                        },
+                        {
+                            "title": "Problem-Solving and Troubleshooting",
+                            "description": "Comprehensive problem-solving strategies, troubleshooting techniques, and debugging methods. Students will learn to identify, analyze, and resolve common issues and challenges.",
+                            "type": "video",
+                            "duration": 2400,
+                            "youtube_search_term": f"{prompt} problem solving troubleshooting tutorial",
+                            "chapter_timestamp": "00:00",
+                            "video_info": {
+                                "title": "Problem-Solving Video",
+                                "description": "Complete guide to problem-solving and troubleshooting techniques"
                             }
                         }
                     ]
                 },
                 {
-                    "title": "Advanced Topics",
-                    "description": "Mastery level content",
+                    "title": "Advanced Implementation and Optimization",
+                    "description": "Advanced implementation strategies, optimization techniques, and performance enhancement methods. This module covers expert-level skills and industry best practices.",
                     "lessons": [
                         {
-                            "title": "Expert Techniques",
-                            "description": "Professional-level skills",
+                            "title": "Expert-Level Techniques and Strategies",
+                            "description": "Master-level techniques, advanced strategies, and expert approaches used by industry professionals. Students will learn sophisticated methods for complex scenarios and high-performance applications.",
                             "type": "video",
-                            "duration": 3000,
-                            "youtube_search_term": f"{prompt} expert level tutorial",
+                            "duration": 3600,
+                            "youtube_search_term": f"{prompt} expert level techniques strategies tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Expert Techniques Video",
-                                "description": "Expert-level techniques and strategies"
+                                "description": "Comprehensive expert-level techniques and advanced strategies"
                             }
                         },
                         {
-                            "title": "Final Project",
-                            "description": "Comprehensive project to demonstrate mastery",
+                            "title": "Performance Optimization and Best Practices",
+                            "description": "Comprehensive optimization techniques, performance enhancement strategies, and industry best practices. Students will learn to maximize efficiency, improve performance, and implement professional standards.",
                             "type": "video",
-                            "duration": 3600,
-                            "youtube_search_term": f"{prompt} complete project tutorial",
+                            "duration": 3000,
+                            "youtube_search_term": f"{prompt} performance optimization best practices tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
-                                "title": "Final Project Video",
-                                "description": "Complete project walkthrough"
+                                "title": "Optimization Video",
+                                "description": "Complete guide to performance optimization and best practices"
+                            }
+                        },
+                        {
+                            "title": "Industry Standards and Professional Development",
+                            "description": "Industry standards, professional development strategies, and career advancement techniques. Students will understand professional requirements, industry expectations, and career growth opportunities.",
+                            "type": "video",
+                            "duration": 2700,
+                            "youtube_search_term": f"{prompt} industry standards professional development tutorial",
+                            "chapter_timestamp": "00:00",
+                            "video_info": {
+                                "title": "Industry Standards Video",
+                                "description": "Comprehensive guide to industry standards and professional development"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "title": "Mastery and Real-World Projects",
+                    "description": "Comprehensive mastery through real-world projects, complex applications, and industry-level implementations. This module demonstrates complete proficiency and professional capabilities.",
+                    "lessons": [
+                        {
+                            "title": "Complete Real-World Project Implementation",
+                            "description": "Comprehensive real-world project covering all aspects from planning to deployment. Students will build a complete, professional-level application using all learned concepts and techniques.",
+                            "type": "video",
+                            "duration": 4200,
+                            "youtube_search_term": f"{prompt} complete real world project tutorial",
+                            "chapter_timestamp": "00:00",
+                            "video_info": {
+                                "title": "Real-World Project Video",
+                                "description": "Complete real-world project implementation from start to finish"
+                            }
+                        },
+                        {
+                            "title": "Advanced Case Studies and Complex Scenarios",
+                            "description": "Advanced case studies, complex scenarios, and challenging applications. Students will analyze and solve sophisticated problems using advanced techniques and professional methodologies.",
+                            "type": "video",
+                            "duration": 3600,
+                            "youtube_search_term": f"{prompt} advanced case studies complex scenarios tutorial",
+                            "chapter_timestamp": "00:00",
+                            "video_info": {
+                                "title": "Advanced Case Studies Video",
+                                "description": "Comprehensive advanced case studies and complex scenarios"
+                            }
+                        },
+                        {
+                            "title": "Final Mastery Assessment and Portfolio Development",
+                            "description": "Comprehensive final assessment, portfolio development, and mastery demonstration. Students will showcase their complete understanding and professional capabilities through comprehensive evaluation.",
+                            "type": "video",
+                            "duration": 3000,
+                            "youtube_search_term": f"{prompt} final mastery assessment portfolio tutorial",
+                            "chapter_timestamp": "00:00",
+                            "video_info": {
+                                "title": "Final Assessment Video",
+                                "description": "Complete final mastery assessment and portfolio development"
                             }
                         }
                     ]
