@@ -67,6 +67,53 @@ class Module(models.Model):
     def __str__(self):
         return f"{self.course.title} - {self.title}"
 
+class ModuleNote(models.Model):
+    """Module-level study notes with comprehensive content"""
+    module = models.OneToOneField(Module, on_delete=models.CASCADE, related_name='module_note')
+    
+    # Module overview and key concepts
+    overview = models.TextField(blank=True)  # Module overview and learning objectives
+    
+    # Key concepts covered in this module
+    key_concepts = models.JSONField(default=list)  # List of key concepts with explanations
+    
+    # Comprehensive notes for the entire module
+    golden_notes = models.JSONField(default=list)  # List of concept cards with detailed explanations
+    
+    # Quick summaries for the module
+    summaries = models.JSONField(default=list)  # List of key concept summaries
+    
+    # User's personal notes for the module
+    own_notes = models.TextField(blank=True, default="")  # User's personal notes
+    
+    # Additional resources and references
+    additional_resources = models.JSONField(default=list)  # List of additional resources
+    
+    # Legacy field for backward compatibility
+    content = models.TextField(blank=True)  # Markdown formatted content
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Module Notes - {self.module.title}"
+    
+    def get_formatted_content(self):
+        """Get formatted content for display"""
+        return self.content or self.overview
+    
+    def get_golden_notes_cards(self):
+        """Get golden notes as concept cards"""
+        return self.golden_notes or []
+    
+    def get_summaries_list(self):
+        """Get summaries as a list"""
+        return self.summaries or []
+    
+    def get_own_notes(self):
+        """Get user's personal notes"""
+        return self.own_notes or ""
+
 class Lesson(models.Model):
     LESSON_TYPES = [
         ('video', 'Video Lesson'),

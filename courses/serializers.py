@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Course, Module, Lesson, Quiz, UserProgress, StudyNote
+from .models import Course, Module, Lesson, Quiz, UserProgress, StudyNote, ModuleNote
 
 class StudyNoteSerializer(serializers.ModelSerializer):
     golden_notes_cards = serializers.SerializerMethodField()
@@ -49,12 +49,43 @@ class LessonSerializer(serializers.ModelSerializer):
             'ai_notes', 'duration', 'order', 'chapter_timestamp', 'quiz', 'study_note', 'created_at'
         ]
 
+class ModuleNoteSerializer(serializers.ModelSerializer):
+    golden_notes_cards = serializers.SerializerMethodField()
+    summaries_list = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ModuleNote
+        fields = [
+            'id', 'overview', 'key_concepts', 'golden_notes', 'summaries', 'own_notes',
+            'golden_notes_cards', 'summaries_list', 'additional_resources',
+            'content', 'created_at', 'updated_at'
+        ]
+    
+    def get_golden_notes_cards(self, obj):
+        return obj.get_golden_notes_cards()
+    
+    def get_summaries_list(self, obj):
+        return obj.get_summaries_list()
+
+class ModuleNoteUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for updating user's module notes"""
+    
+    class Meta:
+        model = ModuleNote
+        fields = ['own_notes']
+    
+    def update(self, instance, validated_data):
+        instance.own_notes = validated_data.get('own_notes', instance.own_notes)
+        instance.save()
+        return instance
+
 class ModuleSerializer(serializers.ModelSerializer):
     lessons = LessonSerializer(many=True, read_only=True)
+    module_note = ModuleNoteSerializer(read_only=True)
     
     class Meta:
         model = Module
-        fields = ['id', 'title', 'order', 'video_id', 'lessons', 'created_at']
+        fields = ['id', 'title', 'order', 'video_id', 'lessons', 'module_note', 'created_at']
 
 class CourseSerializer(serializers.ModelSerializer):
     modules = ModuleSerializer(many=True, read_only=True)

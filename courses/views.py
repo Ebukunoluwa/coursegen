@@ -4,11 +4,11 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
-from .models import Course, Module, Lesson, Quiz, UserProgress, StudyNote
+from .models import Course, Module, Lesson, Quiz, UserProgress, StudyNote, ModuleNote
 from .serializers import (
     CourseSerializer, ModuleSerializer, LessonSerializer, 
     QuizSerializer, UserProgressSerializer, CourseGenerationRequestSerializer,
-    StudyNoteSerializer
+    StudyNoteSerializer, ModuleNoteSerializer, ModuleNoteUpdateSerializer
 )
 from .services import CourseGenerationService
 from django.db import models
@@ -155,6 +155,56 @@ def update_own_notes(request, lesson_id):
     # Update own notes
     from .serializers import OwnNotesUpdateSerializer
     serializer = OwnNotesUpdateSerializer(study_note, data=request.data, partial=True)
+    
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    else:
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def module_notes_detail(request, module_id):
+    """Get enhanced module notes for a module"""
+    module = get_object_or_404(Module, id=module_id)
+    
+    # Check if regeneration is requested
+    regenerate = request.GET.get('regenerate', False)
+    
+    # Get or create module notes
+    module_note, created = ModuleNote.objects.get_or_create(module=module)
+    
+    # If newly created or regeneration requested, generate the notes
+    if created or regenerate:
+        from .services import AIService
+        ai_service = AIService()
+        
+        # Generate comprehensive module notes
+        module_notes = ai_service.generate_module_notes(module.title, module)
+        
+        # Update the module note with enhanced content
+        module_note.overview = module_notes.get('overview', '')
+        module_note.key_concepts = module_notes.get('key_concepts', [])
+        module_note.golden_notes = module_notes.get('golden_notes', [])
+        module_note.summaries = module_notes.get('summaries', [])
+        module_note.content = module_notes.get('content', '')
+        module_note.additional_resources = module_notes.get('additional_resources', [])
+        module_note.save()
+    
+    serializer = ModuleNoteSerializer(module_note)
+    return Response(serializer.data)
+
+@api_view(['PUT', 'PATCH'])
+@permission_classes([AllowAny])
+def update_module_own_notes(request, module_id):
+    """Update user's own notes for a module"""
+    module = get_object_or_404(Module, id=module_id)
+    
+    # Get or create module notes
+    module_note, created = ModuleNote.objects.get_or_create(module=module)
+    
+    # Update own notes
+    serializer = ModuleNoteUpdateSerializer(module_note, data=request.data, partial=True)
     
     if serializer.is_valid():
         serializer.save()

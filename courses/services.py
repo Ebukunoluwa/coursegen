@@ -1191,6 +1191,255 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
             'summary': f"Enhanced study guide for {lesson_title} with comprehensive golden notes and quick summaries."
         }
 
+    def generate_module_notes(self, module_title, module):
+        """Generate comprehensive module notes with overview, key concepts, and detailed content"""
+        cache_key = f"module_notes_{module_title}_{module.id}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+            
+        if not self.client:
+            mock_notes = self._generate_mock_module_notes(module_title, module)
+            self._cache[cache_key] = mock_notes
+            return mock_notes
+        
+        # Get module context
+        lessons = module.lessons.all()
+        lesson_titles = [lesson.title for lesson in lessons]
+        lesson_count = len(lessons)
+        
+        # Create comprehensive context
+        context = f"""
+        Module Title: {module_title}
+        Module Description: {module.course.description}
+        Course Title: {module.course.title}
+        Number of Lessons: {lesson_count}
+        Lesson Titles: {', '.join(lesson_titles)}
+        """
+        
+        # Generate comprehensive module notes
+        module_notes_prompt = f"""
+        {context}
+        
+        Generate COMPREHENSIVE MODULE NOTES for this entire module. This should cover all aspects of the module including:
+        
+        1. MODULE OVERVIEW: A comprehensive overview of what this module covers, its learning objectives, and its importance in the overall course.
+        
+        2. KEY CONCEPTS: A detailed list of all key concepts covered in this module with explanations.
+        
+        3. GOLDEN NOTES: Deep, comprehensive explanations of the main concepts covered in this module (5-8 concept cards).
+        
+        4. SUMMARIES: Quick, scannable bullet points summarizing the key takeaways from this module (8-12 points).
+        
+        5. ADDITIONAL RESOURCES: Suggested additional resources, tools, and references for further learning.
+        
+        Format as JSON:
+        {{
+            "overview": "Comprehensive module overview and learning objectives",
+            "key_concepts": [
+                {{
+                    "concept": "Concept Name",
+                    "explanation": "Detailed explanation of this concept"
+                }}
+            ],
+            "golden_notes": [
+                {{
+                    "title": "Concept Title",
+                    "explanation": "Comprehensive explanation with examples and applications",
+                    "examples": ["Example 1", "Example 2", "Example 3"],
+                    "key_points": ["Key point 1", "Key point 2", "Key point 3"]
+                }}
+            ],
+            "summaries": [
+                "Summary point 1",
+                "Summary point 2",
+                "Summary point 3"
+            ],
+            "additional_resources": [
+                {{
+                    "title": "Resource Title",
+                    "description": "Resource description",
+                    "url": "Resource URL (optional)"
+                }}
+            ]
+        }}
+        
+        Make the content comprehensive, educational, and suitable for {module.course.difficulty} level learners.
+        """
+        
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": module_notes_prompt}],
+                temperature=0.3,
+                max_tokens=1500,
+                timeout=30
+            )
+            
+            content = response.choices[0].message.content.strip()
+            module_notes = self._parse_json_response(content)
+            
+            # Create enhanced module notes structure
+            enhanced_notes = {
+                'overview': module_notes.get('overview', ''),
+                'key_concepts': module_notes.get('key_concepts', []),
+                'golden_notes': module_notes.get('golden_notes', []),
+                'summaries': module_notes.get('summaries', []),
+                'additional_resources': module_notes.get('additional_resources', []),
+                'content': f"# 📚 {module_title} - Module Study Guide\n\n## Overview\n{module_notes.get('overview', '')}\n\n## Key Concepts\n{self._format_key_concepts(module_notes.get('key_concepts', []))}\n\n## Golden Notes\n{self._format_golden_notes(module_notes.get('golden_notes', []))}\n\n## Summaries\n{self._format_summaries(module_notes.get('summaries', []))}",
+                'own_notes': ""
+            }
+            
+            self._cache[cache_key] = enhanced_notes
+            return enhanced_notes
+            
+        except Exception as e:
+            print(f"Error generating module notes: {e}")
+            mock_notes = self._generate_mock_module_notes(module_title, module)
+            self._cache[cache_key] = mock_notes
+            return mock_notes
+
+    def _generate_mock_module_notes(self, module_title, module):
+        """Generate mock module notes for comprehensive coverage"""
+        # Generate dynamic content based on module title
+        module_lower = module_title.lower()
+        
+        if "foundation" in module_lower or "fundamental" in module_lower:
+            overview = f"Comprehensive foundation module covering all essential concepts and principles. This module establishes the core knowledge base required for advanced learning in {module.course.title}."
+            key_concepts = [
+                {"concept": "Core Principles", "explanation": "Fundamental principles and basic concepts that form the foundation of the subject"},
+                {"concept": "Essential Tools", "explanation": "Key tools, technologies, and platforms used in this field"},
+                {"concept": "Basic Terminology", "explanation": "Important terms and definitions that students need to understand"}
+            ]
+            golden_notes = [
+                {
+                    "title": "Foundation Concepts",
+                    "explanation": "Core foundational concepts that provide the building blocks for all advanced topics. Understanding these fundamentals is essential for success in the field.",
+                    "examples": ["Basic principles and theories", "Fundamental methodologies", "Core terminology and definitions"],
+                    "key_points": ["Establish solid foundation", "Understand core principles", "Master basic terminology"]
+                },
+                {
+                    "title": "Essential Tools and Technologies",
+                    "explanation": "Critical tools, software, and technologies that are industry-standard in this field. Students will learn to set up their environment and use key tools effectively.",
+                    "examples": ["Development environments", "Industry-standard software", "Key platforms and tools"],
+                    "key_points": ["Set up development environment", "Master essential tools", "Understand industry standards"]
+                }
+            ]
+        elif "intermediate" in module_lower or "advanced" in module_lower:
+            overview = f"Intermediate to advanced module focusing on practical applications, advanced techniques, and real-world implementation. This module builds on foundational knowledge with sophisticated approaches."
+            key_concepts = [
+                {"concept": "Advanced Techniques", "explanation": "Sophisticated methods and approaches used by industry professionals"},
+                {"concept": "Practical Applications", "explanation": "Real-world implementation and hands-on applications"},
+                {"concept": "Problem-Solving", "explanation": "Strategies for identifying and resolving complex challenges"}
+            ]
+            golden_notes = [
+                {
+                    "title": "Advanced Techniques and Methods",
+                    "explanation": "Sophisticated techniques and methodologies used by industry professionals. These advanced approaches enable students to tackle complex problems and create high-quality solutions.",
+                    "examples": ["Advanced methodologies", "Professional techniques", "Industry best practices"],
+                    "key_points": ["Master advanced techniques", "Apply professional methods", "Implement best practices"]
+                },
+                {
+                    "title": "Real-World Applications",
+                    "explanation": "Practical applications and hands-on implementation of concepts in real-world scenarios. Students will learn to apply their knowledge to solve actual problems.",
+                    "examples": ["Case studies and examples", "Practical implementations", "Industry scenarios"],
+                    "key_points": ["Apply knowledge practically", "Solve real problems", "Implement solutions"]
+                }
+            ]
+        elif "mastery" in module_lower or "project" in module_lower:
+            overview = f"Mastery-level module focusing on comprehensive projects, complex applications, and professional-level implementations. This module demonstrates complete proficiency and industry readiness."
+            key_concepts = [
+                {"concept": "Project Implementation", "explanation": "Complete project development from planning to deployment"},
+                {"concept": "Complex Problem Solving", "explanation": "Advanced problem-solving strategies for sophisticated challenges"},
+                {"concept": "Professional Standards", "explanation": "Industry standards and professional development requirements"}
+            ]
+            golden_notes = [
+                {
+                    "title": "Complete Project Implementation",
+                    "explanation": "Comprehensive project development covering all aspects from initial planning to final deployment. Students will build complete, professional-level applications using all learned concepts.",
+                    "examples": ["Full project lifecycle", "Professional development", "Industry-standard implementation"],
+                    "key_points": ["Complete project development", "Professional implementation", "Industry standards"]
+                },
+                {
+                    "title": "Advanced Problem Solving",
+                    "explanation": "Sophisticated problem-solving strategies for complex challenges and real-world scenarios. Students will learn to analyze and resolve advanced problems using professional methodologies.",
+                    "examples": ["Complex scenario analysis", "Advanced troubleshooting", "Professional problem-solving"],
+                    "key_points": ["Analyze complex problems", "Apply advanced strategies", "Implement professional solutions"]
+                }
+            ]
+        else:
+            # Generic module content
+            overview = f"Comprehensive module covering essential concepts and practical applications in {module.course.title}. This module provides both theoretical understanding and hands-on experience."
+            key_concepts = [
+                {"concept": "Core Concepts", "explanation": "Essential concepts and principles covered in this module"},
+                {"concept": "Practical Applications", "explanation": "Real-world applications and hands-on implementation"},
+                {"concept": "Best Practices", "explanation": "Industry best practices and professional standards"}
+            ]
+            golden_notes = [
+                {
+                    "title": "Module Overview",
+                    "explanation": "Comprehensive overview of all concepts and techniques covered in this module. Students will gain both theoretical understanding and practical skills.",
+                    "examples": ["Concept explanations", "Practical demonstrations", "Real-world examples"],
+                    "key_points": ["Understand core concepts", "Apply practical skills", "Follow best practices"]
+                },
+                {
+                    "title": "Advanced Applications",
+                    "explanation": "Advanced applications and sophisticated techniques that build on foundational knowledge. Students will learn professional-level skills and methodologies.",
+                    "examples": ["Advanced techniques", "Professional applications", "Industry methodologies"],
+                    "key_points": ["Master advanced techniques", "Apply professional skills", "Implement industry standards"]
+                }
+            ]
+        
+        summaries = [
+            f"Comprehensive coverage of {module_title} with detailed explanations and practical applications",
+            "Essential concepts and principles that form the foundation for advanced learning",
+            "Hands-on practical applications with real-world examples and case studies",
+            "Industry best practices and professional standards for effective implementation",
+            "Advanced techniques and methodologies used by industry professionals",
+            "Problem-solving strategies for complex challenges and real-world scenarios",
+            "Complete project implementation from planning to deployment",
+            "Professional development and career advancement opportunities"
+        ]
+        
+        additional_resources = [
+            {
+                "title": "Additional Reading Materials",
+                "description": "Comprehensive reading materials and references for deeper understanding",
+                "url": ""
+            },
+            {
+                "title": "Practice Exercises",
+                "description": "Hands-on exercises and practice problems to reinforce learning",
+                "url": ""
+            },
+            {
+                "title": "Industry Resources",
+                "description": "Professional resources and industry-standard tools for practical application",
+                "url": ""
+            }
+        ]
+        
+        return {
+            'overview': overview,
+            'key_concepts': key_concepts,
+            'golden_notes': golden_notes,
+            'summaries': summaries,
+            'additional_resources': additional_resources,
+            'content': f"# 📚 {module_title} - Module Study Guide\n\n## Overview\n{overview}\n\n## Key Concepts\n{self._format_key_concepts(key_concepts)}\n\n## Golden Notes\n{self._format_golden_notes(golden_notes)}\n\n## Summaries\n{self._format_summaries(summaries)}",
+            'own_notes': ""
+        }
+
+    def _format_key_concepts(self, key_concepts):
+        """Format key concepts for display"""
+        if not key_concepts:
+            return ""
+        
+        formatted = ""
+        for concept in key_concepts:
+            formatted += f"### {concept.get('concept', 'Unknown Concept')}\n"
+            formatted += f"{concept.get('explanation', '')}\n\n"
+        
+        return formatted
+
     def _generate_mock_comprehensive_structure(self, prompt, difficulty):
         """Generate mock comprehensive course structure for prompt-based generation"""
         # Generate intuitive title based on prompt
@@ -2149,5 +2398,23 @@ class CourseGenerationService:
                         code_examples=study_notes.get('code_examples', []),
                         summary=study_notes.get('summary', '')
                     )
+            
+            # Generate comprehensive module notes for each module
+            module_notes = self.ai_service.generate_module_notes(module.title, module)
+            
+            # Create ModuleNote object
+            from .models import ModuleNote
+            ModuleNote.objects.create(
+                module=module,
+                overview=module_notes.get('overview', ''),
+                key_concepts=module_notes.get('key_concepts', []),
+                golden_notes=module_notes.get('golden_notes', []),
+                summaries=module_notes.get('summaries', []),
+                additional_resources=module_notes.get('additional_resources', []),
+                content=module_notes.get('content', ''),
+                own_notes=module_notes.get('own_notes', '')
+            )
+        
+        return course
         
         return course 

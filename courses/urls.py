@@ -16,6 +16,10 @@ urlpatterns = [
     path('lessons/<int:lesson_id>/study-notes/', views.study_notes_detail, name='study_notes_detail'),
     path('lessons/<int:lesson_id>/own-notes/', views.update_own_notes, name='update_own_notes'),
     
+    # Module notes
+    path('modules/<int:module_id>/notes/', views.module_notes_detail, name='module_notes_detail'),
+    path('modules/<int:module_id>/own-notes/', views.update_module_own_notes, name='update_module_own_notes'),
+    
     # Quiz functionality
     path('lessons/<int:lesson_id>/quiz/', views.quiz_detail, name='quiz_detail'),
     path('lessons/<int:lesson_id>/submit-quiz/', views.submit_quiz, name='submit_quiz'),
