@@ -2,11 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { Play, BookOpen, Clock, Navigation } from 'lucide-react';
 import { getCourse, markLessonCompleted } from '../services/api';
+import VideoControls from '../components/VideoControls';
 
 const CourseView = () => {
   const { courseId } = useParams();
   const [course, setCourse] = useState(null);
   const [selectedLesson, setSelectedLesson] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
 
@@ -49,24 +51,13 @@ const CourseView = () => {
     return timestamp;
   };
 
-  const getVideoUrlWithTimestamp = (videoId, timestamp) => {
-    if (!videoId) return '';
-    if (!timestamp) return `https://www.youtube.com/embed/${videoId}`;
-    const seconds = timestampToSeconds(timestamp);
-    return `https://www.youtube.com/embed/${videoId}?start=${seconds}`;
+  const handleTimeUpdate = (currentTime) => {
+    // You can use this to track progress or sync with other components
+    console.log('Current time:', currentTime);
   };
 
-  const timestampToSeconds = (timestamp) => {
-    if (!timestamp) return 0;
-    const parts = timestamp.split(':');
-    if (parts.length === 2) {
-      const [minutes, seconds] = parts;
-      return parseInt(minutes) * 60 + parseInt(seconds);
-    } else if (parts.length === 3) {
-      const [hours, minutes, seconds] = parts;
-      return parseInt(hours) * 3600 + parseInt(minutes) * 60 + parseInt(seconds);
-    }
-    return 0;
+  const handleLessonSelect = (lesson) => {
+    setSelectedLesson(lesson);
   };
 
   if (loading) {
@@ -87,9 +78,10 @@ const CourseView = () => {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <div className="w-80 bg-white shadow-lg overflow-y-auto">
-        <div className="p-6 border-b">
+      {/* Sidebar with proper scrolling */}
+      <div className="w-80 bg-white shadow-lg flex flex-col">
+        {/* Fixed header */}
+        <div className="p-6 border-b flex-shrink-0">
           <h1 className="text-xl font-semibold mb-2">{course.title}</h1>
           <p className="text-sm text-gray-600">{course.description}</p>
           <div className="flex items-center mt-3">
@@ -103,7 +95,8 @@ const CourseView = () => {
           </div>
         </div>
 
-        <div className="p-4">
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
           {course.modules?.map((module) => (
             <div key={module.id} className="mb-6">
               <h3 className="font-semibold text-gray-900 mb-3">{module.title}</h3>
@@ -111,11 +104,11 @@ const CourseView = () => {
                 {module.lessons?.map((lesson) => (
                   <button
                     key={lesson.id}
-                    onClick={() => setSelectedLesson(lesson)}
+                    onClick={() => handleLessonSelect(lesson)}
                     className={`w-full text-left p-3 rounded-lg transition-colors ${
                       selectedLesson?.id === lesson.id
-                        ? 'bg-primary-50 border border-primary-200'
-                        : 'hover:bg-gray-50'
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -150,25 +143,46 @@ const CourseView = () => {
       <div className="flex-1 flex flex-col">
         {selectedLesson ? (
           <>
-            {/* Video Player */}
-            <div className="bg-black aspect-video">
-              {selectedLesson.youtube_video_id ? (
-                <iframe
-                  src={getVideoUrlWithTimestamp(selectedLesson.youtube_video_id, selectedLesson.chapter_timestamp)}
-                  title={selectedLesson.title}
-                  className="w-full h-full"
-                  frameBorder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                ></iframe>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-white">
-                  <div className="text-center">
-                    <Play className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                    <p>Video content will be displayed here</p>
+            {/* Video Player with Controls */}
+            <div className="bg-black">
+              {(() => {
+                // For playlist videos, use the lesson's youtube_video_id
+                // For single videos, fall back to extracting from course.youtube_source
+                let videoId = selectedLesson?.youtube_video_id;
+                
+                if (!videoId && course.youtube_source) {
+                  // Try to extract video ID from course source (for single videos)
+                  const urlMatch = course.youtube_source.match(/[?&]v=([^&]+)/);
+                  videoId = urlMatch ? urlMatch[1] : null;
+                }
+                
+                // Debug logging
+                console.log('Video ID extraction:', {
+                  lessonVideoId: selectedLesson?.youtube_video_id,
+                  courseSource: course.youtube_source,
+                  extractedVideoId: videoId,
+                  selectedLesson: selectedLesson
+                });
+                
+                return videoId ? (
+                  <VideoControls 
+                    key={`${videoId}-${selectedLesson?.id}`} // Force re-render when video changes
+                    videoId={videoId}
+                    timestamp={selectedLesson?.chapter_timestamp}
+                    onTimeUpdate={handleTimeUpdate}
+                  />
+                ) : (
+                  <div className="aspect-video flex items-center justify-center text-white">
+                    <div className="text-center">
+                      <Play className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                      <p>No video available for this lesson</p>
+                      <p className="text-sm text-gray-400 mt-2">
+                        Video ID: {videoId || 'Not found'}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
 
             {/* Lesson Content */}

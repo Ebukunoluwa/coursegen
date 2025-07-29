@@ -16,7 +16,9 @@ from django.db import models
 @permission_classes([AllowAny])
 def generate_course(request):
     """Generate a new course from YouTube URL or topic"""
-    print(f"Received request data: {request.data}")
+    print(f"Request method: {request.method}")
+    print(f"Request content type: {request.content_type}")
+    print(f"Request data: {request.data}")
     
     serializer = CourseGenerationRequestSerializer(data=request.data)
     if serializer.is_valid():
@@ -58,6 +60,20 @@ def course_detail(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     serializer = CourseSerializer(course)
     return Response(serializer.data)
+
+@api_view(['DELETE'])
+@permission_classes([AllowAny])
+def delete_course(request, course_id):
+    """Delete a course"""
+    try:
+        course = get_object_or_404(Course, id=course_id)
+        course.delete()
+        return Response({'message': 'Course deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+    except Exception as e:
+        return Response(
+            {'error': f'Error deleting course: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

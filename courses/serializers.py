@@ -18,14 +18,22 @@ class ModuleSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Module
-        fields = ['id', 'title', 'order', 'lessons', 'created_at']
+        fields = ['id', 'title', 'order', 'video_id', 'lessons', 'created_at']
 
 class CourseSerializer(serializers.ModelSerializer):
     modules = ModuleSerializer(many=True, read_only=True)
+    is_playlist = serializers.SerializerMethodField()
+    video_count = serializers.SerializerMethodField()
     
     class Meta:
         model = Course
-        fields = ['id', 'title', 'description', 'youtube_source', 'difficulty', 'modules', 'created_at', 'updated_at']
+        fields = ['id', 'title', 'description', 'youtube_source', 'playlist_url', 'difficulty', 'modules', 'is_playlist', 'video_count', 'created_at', 'updated_at']
+    
+    def get_is_playlist(self, obj):
+        return obj.is_playlist()
+    
+    def get_video_count(self, obj):
+        return obj.get_video_count()
 
 class UserProgressSerializer(serializers.ModelSerializer):
     lesson_title = serializers.CharField(source='lesson.title', read_only=True)

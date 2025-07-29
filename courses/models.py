@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
+import re
 
 class Course(models.Model):
     DIFFICULTY_CHOICES = [
@@ -11,18 +12,48 @@ class Course(models.Model):
     
     title = models.CharField(max_length=200)
     description = models.TextField()
-    youtube_source = models.URLField(blank=True, null=True)
+    youtube_source = models.URLField(blank=True, null=True)  # Single video URL
+    playlist_url = models.URLField(blank=True, null=True)    # Playlist URL
     difficulty = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default='beginner')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
         return self.title
+    
+    def get_playlist_id(self):
+        """Extract playlist ID from playlist URL"""
+        if not self.playlist_url:
+            return None
+        
+        # Match playlist ID from various YouTube playlist URL formats
+        patterns = [
+            r'(?:youtube\.com/playlist\?list=|youtube\.com/watch\?.*&list=)([^&]+)',
+            r'(?:youtube\.com/playlist\?list=)([^&]+)',
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, self.playlist_url)
+            if match:
+                return match.group(1)
+        return None
+    
+    def is_playlist(self):
+        """Check if this course is based on a playlist"""
+        return bool(self.playlist_url)
+    
+    def get_video_count(self):
+        """Get total number of videos in the course"""
+        total = 0
+        for module in self.modules.all():
+            total += module.lessons.count()
+        return total
 
 class Module(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='modules')
     title = models.CharField(max_length=200)
     order = models.IntegerField(default=0)
+    video_id = models.CharField(max_length=20, blank=True, null=True)  # Video ID for this module
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:

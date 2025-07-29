@@ -6,6 +6,7 @@ urlpatterns = [
     path('generate/', views.generate_course, name='generate_course'),
     path('courses/', views.course_list, name='course_list'),
     path('courses/<int:course_id>/', views.course_detail, name='course_detail'),
+    path('courses/<int:course_id>/delete/', views.delete_course, name='delete_course'),
     
     # Module and lesson details
     path('modules/<int:module_id>/', views.module_detail, name='module_detail'),

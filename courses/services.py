@@ -21,10 +21,154 @@ class YouTubeService:
                 return match.group(1)
         return None
     
+    def extract_playlist_id(self, url):
+        """Extract YouTube playlist ID from URL"""
+        patterns = [
+            r'(?:youtube\.com\/playlist\?list=|youtube\.com\/watch\?.*&list=)([^&\n?#]+)',
+            r'youtube\.com\/playlist\?list=([^&\n?#]+)',
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, url)
+            if match:
+                return match.group(1)
+        return None
+    
+    def get_playlist_videos(self, playlist_id):
+        """Get all videos from a YouTube playlist"""
+        if not self.api_key or self.api_key == 'your-youtube-api-key-here':
+            # Return mock data when API key is not available
+            return [
+                {
+                    'id': 'mock_video_1',
+                    'title': 'Mock Video 1',
+                    'description': 'This is a mock video. Please add your YouTube API key to get real playlist information.',
+                    'position': 0,
+                    'published_at': '2023-01-01T00:00:00Z',
+                    'duration': 1800,
+                    'channel': 'Mock Channel'
+                },
+                {
+                    'id': 'mock_video_2',
+                    'title': 'Mock Video 2',
+                    'description': 'This is a mock video. Please add your YouTube API key to get real playlist information.',
+                    'position': 1,
+                    'published_at': '2023-01-01T00:00:00Z',
+                    'duration': 1800,
+                    'channel': 'Mock Channel'
+                }
+            ]
+            
+        url = "https://www.googleapis.com/youtube/v3/playlistItems"
+        params = {
+            'part': 'snippet,contentDetails',
+            'playlistId': playlist_id,
+            'maxResults': 50,  # Maximum allowed by API
+            'key': self.api_key
+        }
+        
+        videos = []
+        next_page_token = None
+        
+        try:
+            while True:
+                if next_page_token:
+                    params['pageToken'] = next_page_token
+                
+                response = requests.get(url, params=params)
+                response.raise_for_status()
+                data = response.json()
+                
+                for item in data['items']:
+                    video_id = item['contentDetails']['videoId']
+                    video_info = {
+                        'id': video_id,
+                        'title': item['snippet']['title'],
+                        'description': item['snippet']['description'],
+                        'position': item['snippet']['position'],
+                        'published_at': item['snippet']['publishedAt']
+                    }
+                    
+                    # Get additional video details
+                    video_details = self.get_video_info(video_id)
+                    if video_details:
+                        video_info.update(video_details)
+                    
+                    videos.append(video_info)
+                
+                next_page_token = data.get('nextPageToken')
+                if not next_page_token:
+                    break
+                    
+        except Exception as e:
+            print(f"Error fetching playlist videos: {e}")
+            # Return mock data on error
+            return [
+                {
+                    'id': 'error_video_1',
+                    'title': 'Error Video 1',
+                    'description': f'Could not fetch playlist videos. Error: {e}',
+                    'position': 0,
+                    'published_at': '2023-01-01T00:00:00Z',
+                    'duration': 1800,
+                    'channel': 'Unknown Channel'
+                }
+            ]
+        
+        return videos
+    
+    def get_playlist_info(self, playlist_id):
+        """Get playlist information from YouTube API"""
+        if not self.api_key or self.api_key == 'your-youtube-api-key-here':
+            # Return mock data when API key is not available
+            return {
+                'title': f'Mock Playlist {playlist_id}',
+                'description': 'This is a mock playlist. Please add your YouTube API key to get real playlist information.',
+                'channel_title': 'Mock Channel',
+                'published_at': '2023-01-01T00:00:00Z'
+            }
+            
+        try:
+            url = f"https://www.googleapis.com/youtube/v3/playlists"
+            params = {
+                'part': 'snippet',
+                'id': playlist_id,
+                'key': self.api_key
+            }
+            
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            
+            data = response.json()
+            if data.get('items'):
+                playlist = data['items'][0]['snippet']
+                return {
+                    'title': playlist.get('title', ''),
+                    'description': playlist.get('description', ''),
+                    'channel_title': playlist.get('channelTitle', ''),
+                    'published_at': playlist.get('publishedAt', '')
+                }
+            return None
+        except Exception as e:
+            print(f"Error fetching playlist info: {e}")
+            # Return mock data on error
+            return {
+                'title': f'Error Playlist {playlist_id}',
+                'description': f'Could not fetch playlist information. Error: {e}',
+                'channel_title': 'Unknown Channel',
+                'published_at': '2023-01-01T00:00:00Z'
+            }
+    
     def get_video_info(self, video_id):
         """Get video information from YouTube API"""
-        if not self.api_key:
-            return None
+        if not self.api_key or self.api_key == 'your-youtube-api-key-here':
+            # Return mock data when API key is not available
+            return {
+                'title': f'Video {video_id}',
+                'description': f'This is a mock description for video {video_id}. Please add your YouTube API key to get real video information.',
+                'duration': 3600,  # 1 hour default
+                'channel': 'Mock Channel'
+            }
             
         url = "https://www.googleapis.com/youtube/v3/videos"
         params = {
@@ -34,7 +178,7 @@ class YouTubeService:
         }
         
         try:
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=15)  # Add timeout
             response.raise_for_status()
             data = response.json()
             
@@ -48,6 +192,13 @@ class YouTubeService:
                 }
         except Exception as e:
             print(f"Error fetching YouTube video info: {e}")
+            # Return mock data on error
+            return {
+                'title': f'Video {video_id}',
+                'description': f'Could not fetch video information. Error: {e}',
+                'duration': 3600,  # 1 hour default
+                'channel': 'Unknown Channel'
+            }
         
         return None
     
@@ -65,7 +216,7 @@ class YouTubeService:
         }
         
         try:
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=15)  # Add timeout
             response.raise_for_status()
             data = response.json()
             
@@ -95,18 +246,43 @@ class YouTubeService:
         lines = description.split('\n')
         
         for line in lines:
-            # Look for timestamp patterns like "1:23 Chapter Title" or "01:23 Chapter Title"
-            timestamp_match = re.search(r'(\d{1,2}:\d{2}(?::\d{2})?)\s+(.+)', line.strip())
-            if timestamp_match:
-                timestamp = timestamp_match.group(1)
-                title = timestamp_match.group(2).strip()
-                if title and len(title) > 3:  # Filter out very short titles
-                    chapters.append({
-                        'timestamp': timestamp,
-                        'title': title,
-                        'seconds': self._timestamp_to_seconds(timestamp)
-                    })
+            line = line.strip()
+            # Look for various timestamp patterns
+            patterns = [
+                r'(\d{1,2}:\d{2}(?::\d{2})?)\s+(.+)',  # 1:23 Chapter Title
+                r'(\d{1,2}:\d{2}(?::\d{2})?)\s*[-–—]\s*(.+)',  # 1:23 - Chapter Title
+                r'(\d{1,2}:\d{2}(?::\d{2})?)\s*[•·]\s*(.+)',  # 1:23 • Chapter Title
+                r'(\d{1,2}:\d{2}(?::\d{2})?)\s*[\(\[].+?[\)\]]\s*(.+)',  # 1:23 (Intro) Chapter Title
+                r'(\d{1,2}:\d{2}(?::\d{2})?)\s*[0-9]+\.\s*(.+)',  # 1:23 1. Chapter Title
+                r'(\d{1,2}:\d{2}(?::\d{2})?)\s*[a-zA-Z]\)\s*(.+)',  # 1:23 a) Chapter Title
+                r'(\d{1,2}:\d{2}(?::\d{2})?)\s*[A-Z]\.\s*(.+)',  # 1:23 A. Chapter Title
+                r'(\d{1,2}:\d{2}(?::\d{2})?)\s*[0-9]+\)\s*(.+)',  # 1:23 1) Chapter Title
+            ]
+            
+            for pattern in patterns:
+                timestamp_match = re.search(pattern, line)
+                if timestamp_match:
+                    timestamp = timestamp_match.group(1)
+                    title = timestamp_match.group(2).strip()
+                    # Clean up title
+                    title = re.sub(r'^[-–—•·\s]+', '', title)  # Remove leading symbols
+                    title = re.sub(r'[-–—•·\s]+$', '', title)  # Remove trailing symbols
+                    title = re.sub(r'^[0-9]+\.\s*', '', title)  # Remove leading numbers
+                    title = re.sub(r'^[a-zA-Z]\)\s*', '', title)  # Remove leading letters
+                    title = re.sub(r'^[A-Z]\.\s*', '', title)  # Remove leading capital letters
+                    title = re.sub(r'^[0-9]+\)\s*', '', title)  # Remove leading numbers with )
+                    
+                    if title and len(title) > 3:
+                        seconds = self._timestamp_to_seconds(timestamp)
+                        chapters.append({
+                            'timestamp': timestamp,
+                            'title': title,
+                            'seconds': seconds
+                        })
+                    break
         
+        # Sort chapters by timestamp
+        chapters.sort(key=lambda x: x['seconds'])
         return chapters
     
     def generate_chapters_from_transcript(self, transcript, video_duration):
@@ -118,25 +294,41 @@ class YouTubeService:
             client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
             
             prompt = f"""
-            Analyze this video transcript and create logical chapters with timestamps.
+            Analyze this video transcript and create detailed, meaningful chapters with timestamps.
             Video duration: {video_duration} seconds
             
             Transcript:
-            {transcript[:2000]}...
+            {transcript[:3000]}...
             
-            Create 5-8 chapters with timestamps in this format:
-            - 00:00 Introduction
-            - 02:30 Main Topic 1
-            - 05:15 Main Topic 2
-            etc.
+            Create 8-12 detailed chapters that cover:
+            1. Introduction and overview
+            2. Key concepts and main topics
+            3. Practical examples and demonstrations
+            4. Important tips and best practices
+            5. Common mistakes and how to avoid them
+            6. Advanced techniques and tips
+            7. Summary and next steps
             
-            Return only the chapters in the format above, no additional text.
+            Each chapter should be meaningful and cover a specific topic or concept.
+            Distribute chapters evenly throughout the video duration.
+            
+            Return chapters in this exact format:
+            - 00:00 Introduction and Overview
+            - 02:30 Key Concepts Explained
+            - 05:15 Practical Examples
+            - 08:45 Best Practices
+            - 12:20 Common Mistakes
+            - 15:30 Advanced Techniques
+            - 18:45 Tips and Tricks
+            - 22:10 Summary and Conclusion
+            
+            Make sure timestamps are realistic and evenly distributed across the video duration.
             """
             
             response = client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=500
+                max_tokens=800
             )
             
             chapters_text = response.choices[0].message.content.strip()
@@ -261,9 +453,11 @@ class AIService:
         
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.7
+                temperature=0.7,
+                max_tokens=1500,  # Reduced for faster response
+                timeout=30  # Add timeout
             )
             
             import json
@@ -293,9 +487,11 @@ class AIService:
         
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.5
+                temperature=0.5,
+                max_tokens=800,  # Reduced for faster response
+                timeout=20  # Add timeout
             )
             
             return response.choices[0].message.content
@@ -403,53 +599,416 @@ class CourseGenerationService:
         if not youtube_url and not topic:
             raise ValueError("Either youtube_url or topic must be provided")
         
-        video_info = None
-        chapters = []
-        video_id = None
+        # Check if it's a playlist
+        playlist_id = self.youtube_service.extract_playlist_id(youtube_url) if youtube_url else None
+        video_id = self.youtube_service.extract_video_id(youtube_url) if youtube_url else None
         
-        if youtube_url:
-            video_id = self.youtube_service.extract_video_id(youtube_url)
-            if video_id:
-                video_info = self.youtube_service.get_video_info(video_id)
-                
-                if video_info:
-                    # Extract chapters from description first
-                    chapters = self.youtube_service.extract_chapters_from_description(video_info.get('description', ''))
-                    
-                    # If no chapters in description, try to get transcript and generate chapters
-                    if not chapters:
-                        transcript = self.youtube_service.get_video_transcript(video_id)
-                        if transcript:
-                            chapters = self.youtube_service.generate_chapters_from_transcript(
-                                transcript, 
-                                video_info.get('duration', 0)
-                            )
-                    
-                    # Use video title as topic if not provided
-                    if not topic or topic.strip() == '':
-                        topic = video_info.get('title', 'YouTube Course')
-                else:
-                    # Fallback if video info can't be fetched
-                    topic = topic or "YouTube Course"
-            else:
-                topic = topic or "YouTube Course"
+        if playlist_id:
+            return self._generate_playlist_course(playlist_id, topic, difficulty)
+        elif video_id:
+            return self._generate_single_video_course(video_id, topic, difficulty)
         else:
-            topic = topic or "General Course"
+            return self._generate_topic_course(topic, difficulty)
+    
+    def _generate_playlist_course(self, playlist_id, topic, difficulty):
+        """Generate course from YouTube playlist"""
+        playlist_info = self.youtube_service.get_playlist_info(playlist_id)
         
-        # Generate course structure
-        course_structure = self.ai_service.generate_course_structure(
-            topic, video_info, difficulty, chapters
-        )
+        if not playlist_info:
+            raise ValueError("Could not fetch playlist information")
+        
+        # Get all videos in the playlist
+        playlist_videos = self.youtube_service.get_playlist_videos(playlist_id)
+        
+        if not playlist_videos:
+            raise ValueError("Could not fetch playlist videos")
+        
+        # Use playlist title as topic if not provided
+        if not topic or topic.strip() == '':
+            topic = playlist_info.get('title', 'Playlist Course')
         
         # Create course
         course = Course.objects.create(
-            title=course_structure['title'],
-            description=course_structure['description'],
-            youtube_source=youtube_url,
+            title=playlist_info.get('title', topic),
+            description=playlist_info.get('description', '')[:500] + '...' if playlist_info.get('description') else f'Course based on {topic} playlist',
+            youtube_source=f"https://www.youtube.com/playlist?list={playlist_id}",
+            playlist_url=f"https://www.youtube.com/playlist?list={playlist_id}",
             difficulty=difficulty
         )
         
+        module_order = 0
+        
+        for video_data in playlist_videos:
+            video_id = video_data['id']  # Changed from 'video_id' to 'id'
+            video_title = video_data['title']
+            
+            # Get video info and chapters
+            video_info = self.youtube_service.get_video_info(video_id)
+            chapters = []
+            
+            if video_info:
+                # Extract chapters from description first
+                chapters = self.youtube_service.extract_chapters_from_description(video_info.get('description', ''))
+                
+                # If no chapters in description, try to get transcript and generate chapters
+                if not chapters:
+                    transcript = self.youtube_service.get_video_transcript(video_id)
+                    if transcript:
+                        chapters = self.youtube_service.generate_chapters_from_transcript(
+                            transcript,
+                            video_info.get('duration', 0)
+                        )
+            
+            # Create module for this video
+            if chapters:
+                # Structure chapters into modules for this video
+                video_modules = self._structure_chapters_into_modules(chapters, video_id, video_info)
+                
+                for module_data in video_modules:
+                    module = Module.objects.create(
+                        course=course,
+                        title=f"{video_title} - {module_data['title']}",
+                        order=module_order,
+                        video_id=video_id
+                    )
+                    
+                    for lesson_data in module_data['lessons']:
+                        lesson = Lesson.objects.create(
+                            module=module,
+                            title=lesson_data['title'],
+                            youtube_video_id=video_id,
+                            ai_notes=lesson_data.get('ai_notes', ''),
+                            duration=lesson_data.get('duration', 0),
+                            order=lesson_data.get('order', 0),
+                            chapter_timestamp=lesson_data.get('chapter_timestamp', '')
+                        )
+                    
+                    module_order += 1
+            else:
+                # No chapters found, create a single module for this video
+                module = Module.objects.create(
+                    course=course,
+                    title=f"Video: {video_title}",
+                    order=module_order,
+                    video_id=video_id
+                )
+                
+                # Generate AI notes for the entire video
+                video_notes = self._generate_video_notes(
+                    video_title,
+                    video_info.get('description', '') if video_info else ''
+                )
+                
+                lesson = Lesson.objects.create(
+                    module=module,
+                    title=video_title,
+                    youtube_video_id=video_id,
+                    ai_notes=video_notes,
+                    duration=video_info.get('duration', 0) if video_info else 0,
+                    order=0
+                )
+                
+                module_order += 1
+        
+        return course
+    
+    def _generate_video_notes(self, video_title, video_description):
+        """Generate AI notes for an entire video"""
+        if not self.ai_service.client:
+            return f"AI-generated notes for {video_title}. This video covers important concepts and provides valuable insights."
+        
+        try:
+            prompt = f"""
+            Create comprehensive study notes for this video: "{video_title}"
+            
+            Video description: {video_description[:500]}...
+            
+            Generate detailed notes that include:
+            - Key concepts and main points
+            - Important definitions and explanations
+            - Practical examples and applications
+            - Summary of key takeaways
+            
+            Format the notes in a clear, structured way that's easy to follow.
+            """
+            
+            response = self.ai_service.client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=800
+            )
+            
+            return response.choices[0].message.content.strip()
+            
+        except Exception as e:
+            print(f"Error generating video notes: {e}")
+            return f"AI-generated notes for {video_title}. This video covers important concepts and provides valuable insights."
+    
+    def _generate_chapter_notes(self, chapter_title, video_title, video_description, timestamp):
+        """Generate AI notes for a specific chapter"""
+        if not self.ai_service.client:
+            return f"AI-generated notes for {chapter_title} from {video_title}. This chapter covers important concepts and provides valuable insights."
+        
+        try:
+            prompt = f"""
+            Create detailed study notes for this specific chapter: "{chapter_title}"
+            From video: "{video_title}"
+            Chapter starts at: {timestamp}
+            
+            Video description: {video_description[:500]}...
+            
+            Generate focused notes for this chapter that include:
+            - Key concepts covered in this specific section
+            - Important points and explanations
+            - Examples and practical applications
+            - Summary of what was learned in this chapter
+            
+            Format the notes in a clear, structured way that's easy to follow.
+            """
+            
+            response = self.ai_service.client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=600
+            )
+            
+            return response.choices[0].message.content.strip()
+            
+        except Exception as e:
+            print(f"Error generating chapter notes: {e}")
+            return f"AI-generated notes for {chapter_title} from {video_title}. This chapter covers important concepts and provides valuable insights."
+    
+    def _generate_single_video_course(self, video_id, topic, difficulty):
+        """Generate course from single YouTube video"""
+        video_info = self.youtube_service.get_video_info(video_id)
+        
+        if not video_info:
+            raise ValueError("Could not fetch video information")
+        
+        # Extract chapters from description first
+        chapters = self.youtube_service.extract_chapters_from_description(video_info.get('description', ''))
+        
+        # If no chapters in description, try to get transcript and generate chapters
+        if not chapters:
+            transcript = self.youtube_service.get_video_transcript(video_id)
+            if transcript:
+                chapters = self.youtube_service.generate_chapters_from_transcript(
+                    transcript,
+                    video_info.get('duration', 0)
+                )
+        
+        # Use video title as topic if not provided
+        if not topic or topic.strip() == '':
+            topic = video_info.get('title', 'YouTube Course')
+        
+        # Create course
+        course = Course.objects.create(
+            title=video_info.get('title', topic),
+            description=video_info.get('description', '')[:500] + '...' if video_info.get('description') else f'Course based on {topic}',
+            youtube_source=f"https://www.youtube.com/watch?v={video_id}",
+            difficulty=difficulty
+        )
+        
+        if chapters:
+            # Structure chapters into modules based on duration
+            modules = self._structure_chapters_into_modules(chapters, video_id, video_info)
+            
+            # Create modules and lessons
+            for module_data in modules:
+                module = Module.objects.create(
+                    course=course,
+                    title=module_data['title'],
+                    order=module_data['order']
+                )
+                
+                for lesson_data in module_data['lessons']:
+                    lesson = Lesson.objects.create(
+                        module=module,
+                        title=lesson_data['title'],
+                        youtube_video_id=video_id,
+                        ai_notes=lesson_data.get('ai_notes', ''),
+                        duration=lesson_data.get('duration', 0),
+                        order=lesson_data.get('order', 0),
+                        chapter_timestamp=lesson_data.get('chapter_timestamp', '')
+                    )
+        else:
+            # No chapters found, generate AI course structure
+            course_structure = self.ai_service.generate_course_structure(
+                topic, video_info, difficulty, chapters
+            )
+            
+            # Update course with AI-generated title and description
+            course.title = course_structure['title']
+            course.description = course_structure['description']
+            course.save()
+            
+            # Create modules and lessons
+            for module_data in course_structure['modules']:
+                module = Module.objects.create(
+                    course=course,
+                    title=module_data['title'],
+                    order=module_data.get('order', 0)
+                )
+                
+                for lesson_data in module_data['lessons']:
+                    lesson = Lesson.objects.create(
+                        module=module,
+                        title=lesson_data['title'],
+                        youtube_video_id=video_id,
+                        ai_notes=lesson_data.get('ai_notes', ''),
+                        duration=lesson_data.get('duration', 0),
+                        order=lesson_data.get('order', 0)
+                    )
+                    
+                    # Create quiz if questions provided
+                    quiz_questions = lesson_data.get('quiz_questions', [])
+                    if quiz_questions:
+                        quiz = Quiz.objects.create(
+                            lesson=lesson,
+                            questions=quiz_questions
+                        )
+        
+        return course
+
+    def _structure_chapters_into_modules(self, chapters, video_id, video_info):
+        """Structure chapters into modules based on duration and type"""
+        modules = []
+        current_module = {
+            'title': '',
+            'order': 0,
+            'lessons': [],
+            'total_duration': 0
+        }
+        
+        for i, chapter in enumerate(chapters):
+            duration = chapter.get('seconds', 0)
+            title = chapter['title']
+            
+            # Determine module type based on duration
+            if duration <= 600:  # 10 minutes or less
+                module_type = "Micro Module"
+                max_duration = 600
+            elif duration <= 1200:  # 10-20 minutes
+                module_type = "Standard Module"
+                max_duration = 1200
+            elif duration <= 2400:  # 20-40 minutes
+                module_type = "Deep Dive Module"
+                max_duration = 2400
+            else:  # > 40 minutes
+                module_type = "Max Module"
+                max_duration = 3600  # 1 hour max
+            
+            # Check if we need to start a new module
+            if (current_module['total_duration'] + duration > max_duration and 
+                len(current_module['lessons']) > 0):
+                
+                # Finalize current module
+                if current_module['lessons']:
+                    modules.append(current_module)
+                
+                # Start new module
+                current_module = {
+                    'title': f"{module_type}: {title}",
+                    'order': len(modules),
+                    'lessons': [],
+                    'total_duration': 0
+                }
+            
+            # Generate AI notes for this chapter
+            chapter_notes = self._generate_chapter_notes(
+                title, 
+                video_info.get('title', ''), 
+                video_info.get('description', ''),
+                chapter['timestamp']
+            )
+            
+            # Add lesson to current module
+            current_module['lessons'].append({
+                'title': title,
+                'youtube_video_id': video_id,
+                'ai_notes': chapter_notes,
+                'duration': duration,
+                'order': len(current_module['lessons']),
+                'chapter_timestamp': chapter['timestamp']
+            })
+            current_module['total_duration'] += duration
+        
+        # Add the last module if it has lessons
+        if current_module['lessons']:
+            modules.append(current_module)
+        
+        return modules
+    
+    def _generate_mock_course(self, youtube_url, topic, difficulty):
+        """Generate a mock course for testing"""
+        # Extract video ID for mock data
+        video_id = self.youtube_service.extract_video_id(youtube_url) if youtube_url else 'mock_video_123'
+        
+        # Create course
+        course = Course.objects.create(
+            title=f"{topic or 'Python'} Course - Mock Data",
+            description=f"Mock course for testing. Video: {video_id}",
+            youtube_source=youtube_url or "https://www.youtube.com/watch?v=mock",
+            difficulty=difficulty
+        )
+        
+        # Create mock modules
+        modules_data = [
+            {
+                'title': 'Introduction',
+                'lessons': [
+                    {'title': 'Getting Started', 'duration': 300, 'ai_notes': 'Mock notes for getting started'},
+                    {'title': 'Basic Concepts', 'duration': 600, 'ai_notes': 'Mock notes for basic concepts'},
+                ]
+            },
+            {
+                'title': 'Core Topics',
+                'lessons': [
+                    {'title': 'Main Topic 1', 'duration': 450, 'ai_notes': 'Mock notes for topic 1'},
+                    {'title': 'Main Topic 2', 'duration': 450, 'ai_notes': 'Mock notes for topic 2'},
+                ]
+            },
+            {
+                'title': 'Advanced Topics',
+                'lessons': [
+                    {'title': 'Advanced Concept 1', 'duration': 600, 'ai_notes': 'Mock notes for advanced topic 1'},
+                    {'title': 'Advanced Concept 2', 'duration': 600, 'ai_notes': 'Mock notes for advanced topic 2'},
+                ]
+            }
+        ]
+        
         # Create modules and lessons
+        for i, module_data in enumerate(modules_data):
+            module = Module.objects.create(
+                course=course,
+                title=module_data['title'],
+                order=i,
+                video_id=video_id
+            )
+            
+            for j, lesson_data in enumerate(module_data['lessons']):
+                lesson = Lesson.objects.create(
+                    module=module,
+                    title=lesson_data['title'],
+                    ai_notes=lesson_data['ai_notes'],
+                    duration=lesson_data['duration'],
+                    order=j,
+                    youtube_video_id=video_id,
+                    chapter_timestamp=f"{j*5:02d}:00"
+                )
+        
+        return course
+
+    def _generate_topic_course(self, topic, difficulty):
+        """Generate course from topic only (no video)"""
+        course_structure = self.ai_service.generate_course_structure(topic, None, difficulty)
+        
+        course = Course.objects.create(
+            title=course_structure['title'],
+            description=course_structure['description'],
+            difficulty=difficulty
+        )
+        
         for module_data in course_structure['modules']:
             module = Module.objects.create(
                 course=course,
@@ -458,25 +1017,14 @@ class CourseGenerationService:
             )
             
             for lesson_data in module_data['lessons']:
-                # Find corresponding chapter for timestamp
-                chapter_timestamp = None
-                if chapters and 'title' in lesson_data:
-                    for chapter in chapters:
-                        if chapter['title'].lower() in lesson_data['title'].lower():
-                            chapter_timestamp = chapter['timestamp']
-                            break
-                
                 lesson = Lesson.objects.create(
                     module=module,
                     title=lesson_data['title'],
-                    youtube_video_id=video_id,
                     ai_notes=lesson_data.get('ai_notes', ''),
                     duration=lesson_data.get('duration', 0),
-                    order=lesson_data.get('order', 0),
-                    chapter_timestamp=chapter_timestamp  # Add timestamp for navigation
+                    order=lesson_data.get('order', 0)
                 )
                 
-                # Create quiz for the lesson
                 quiz_questions = lesson_data.get('quiz_questions', [])
                 if quiz_questions:
                     quiz = Quiz.objects.create(

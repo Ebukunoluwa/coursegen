@@ -7,7 +7,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 120000, // 2 minutes timeout for AI generation
+  timeout: 300000, // 5 minutes timeout for AI generation
 });
 
 // Course generation
@@ -33,6 +33,15 @@ export const getCourses = async () => {
 export const getCourse = async (courseId) => {
   try {
     const response = await api.get(`/courses/${courseId}/`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const deleteCourse = async (courseId) => {
+  try {
+    const response = await api.delete(`/courses/${courseId}/delete/`);
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
