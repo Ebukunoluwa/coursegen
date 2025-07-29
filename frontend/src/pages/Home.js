@@ -111,8 +111,8 @@ const Home = () => {
       // For prompt-based generation, we'll use a special endpoint or modify the existing one
       const courseData = {
         ...promptFormData,
-        generation_type: 'prompt',
-        youtube_url: null // No specific URL for prompt-based generation
+        generation_type: 'prompt'
+        // No youtube_url for prompt-based generation
       };
       const course = await generateCourse(courseData);
       console.log('Course generated successfully:', course);

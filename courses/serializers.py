@@ -81,7 +81,7 @@ class UserProgressSerializer(serializers.ModelSerializer):
         fields = ['id', 'lesson', 'lesson_title', 'module_title', 'course_title', 'completed', 'quiz_score', 'completed_at']
 
 class CourseGenerationRequestSerializer(serializers.Serializer):
-    youtube_url = serializers.URLField(required=False, allow_blank=True)
+    youtube_url = serializers.URLField(required=False, allow_blank=True, allow_null=True)
     topic = serializers.CharField(required=False, allow_blank=True)
     prompt = serializers.CharField(required=False, allow_blank=True)
     difficulty = serializers.ChoiceField(choices=Course.DIFFICULTY_CHOICES, default='beginner')
