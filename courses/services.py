@@ -600,8 +600,8 @@ class AIService:
         
         Format as JSON:
         {{
-            "title": "Comprehensive Course Title",
-            "description": "Detailed course description",
+            "title": "Professional, engaging course title (e.g., 'Complete Python Programming Masterclass', 'Digital Marketing Strategy: From Beginner to Expert')",
+            "description": "Detailed course description that explains what students will learn and achieve",
             "modules": [
                 {{
                     "title": "Module Title",
@@ -626,6 +626,13 @@ class AIService:
         
         For YouTube search terms, use specific, targeted terms that will find high-quality educational videos.
         Examples: "python for beginners tutorial", "machine learning basics explained", "data science fundamentals"
+        
+        IMPORTANT: Create a professional, engaging course title that clearly communicates the value and scope of the course.
+        Examples of good titles:
+        - "Complete Python Programming Masterclass: From Beginner to Advanced"
+        - "Digital Marketing Strategy: From Beginner to Expert"
+        - "Data Science Fundamentals: Master Analytics & Machine Learning"
+        - "Web Development Bootcamp: Full-Stack Mastery"
         
         Ensure the course is comprehensive, well-structured, and suitable for {difficulty} level learners.
         """
@@ -1048,9 +1055,52 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
 
     def _generate_mock_comprehensive_structure(self, prompt, difficulty):
         """Generate mock comprehensive course structure for prompt-based generation"""
+        # Generate intuitive title based on prompt
+        if "python" in prompt.lower():
+            title = "Complete Python Programming Masterclass"
+        elif "data science" in prompt.lower() or "data" in prompt.lower():
+            title = "Data Science Fundamentals: From Beginner to Pro"
+        elif "machine learning" in prompt.lower() or "ml" in prompt.lower():
+            title = "Machine Learning Engineering: Complete Roadmap"
+        elif "ads" in prompt.lower() or "advertising" in prompt.lower():
+            title = "Digital Advertising Strategy: Complete Guide"
+        elif "marketing" in prompt.lower():
+            title = "Digital Marketing Mastery: Comprehensive Course"
+        elif "web" in prompt.lower() or "development" in prompt.lower():
+            title = "Web Development Bootcamp: Full-Stack Mastery"
+        elif "javascript" in prompt.lower():
+            title = "JavaScript Programming: Complete Developer Course"
+        elif "react" in prompt.lower():
+            title = "React.js Development: Modern Web Applications"
+        elif "node" in prompt.lower():
+            title = "Node.js Backend Development: Server-Side Mastery"
+        elif "sql" in prompt.lower() or "database" in prompt.lower():
+            title = "SQL Database Management: Complete Course"
+        elif "excel" in prompt.lower():
+            title = "Microsoft Excel Mastery: Data Analysis & Automation"
+        elif "photoshop" in prompt.lower():
+            title = "Adobe Photoshop: Digital Design Mastery"
+        elif "video" in prompt.lower() or "editing" in prompt.lower():
+            title = "Video Editing & Production: Complete Course"
+        elif "photography" in prompt.lower():
+            title = "Digital Photography: From Beginner to Professional"
+        elif "business" in prompt.lower():
+            title = "Business Strategy & Entrepreneurship: Complete Guide"
+        elif "finance" in prompt.lower():
+            title = "Personal Finance & Investment: Smart Money Management"
+        elif "cooking" in prompt.lower() or "culinary" in prompt.lower():
+            title = "Culinary Arts: Cooking Mastery from Basics to Advanced"
+        elif "fitness" in prompt.lower() or "workout" in prompt.lower():
+            title = "Fitness & Nutrition: Complete Health & Wellness Guide"
+        elif "language" in prompt.lower() or "spanish" in prompt.lower() or "french" in prompt.lower():
+            title = "Language Learning: Complete Communication Mastery"
+        else:
+            # Generic but professional title
+            title = f"Complete {prompt.title()} Mastery Course"
+        
         return {
-            "title": f"Comprehensive {prompt} Course",
-            "description": f"AI-generated comprehensive course on {prompt} for {difficulty} level learners",
+            "title": title,
+            "description": f"Comprehensive {prompt} course designed for {difficulty} level learners. Master essential concepts, practical applications, and advanced techniques through structured learning modules with real-world examples and hands-on projects.",
             "modules": [
                 {
                     "title": "Introduction to the Topic",
@@ -1774,16 +1824,20 @@ class CourseGenerationService:
 
     def _generate_prompt_course(self, prompt, difficulty):
         """Generate a comprehensive course from a learning prompt"""
-        # Create course with prompt as title
+        # Generate comprehensive course structure using AI
+        course_structure = self.ai_service.generate_comprehensive_course_structure(prompt, difficulty)
+        
+        # Use AI-generated title and description instead of raw prompt
+        course_title = course_structure.get('title', f'Complete {prompt} Course')
+        course_description = course_structure.get('description', f'Comprehensive course on {prompt} for {difficulty} level learners')
+        
+        # Create course with AI-generated title
         course = Course.objects.create(
-            title=prompt,
-            description=f'AI-generated course: {prompt}',
+            title=course_title,
+            description=course_description,
             difficulty=difficulty,
             generation_type='prompt'
         )
-        
-        # Generate comprehensive course structure using AI
-        course_structure = self.ai_service.generate_comprehensive_course_structure(prompt, difficulty)
         
         # Create modules and lessons
         for i, module_data in enumerate(course_structure.get('modules', [])):
