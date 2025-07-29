@@ -993,55 +993,127 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
 
     def _generate_mock_enhanced_notes(self, lesson_title):
         """Generate mock enhanced notes with 3 types: Golden Notes, Summaries, and Own Notes"""
-        golden_notes = [
-            {
-                "title": "Bureaucracy",
-                "explanation": "An organizational form characterized by hierarchical structures and formalized rules that guide impersonal and rational decision-making. This management approach emphasizes efficiency through standardized procedures and clear authority chains.",
-                "examples": ["Government agencies and departments", "Large corporations with formal hierarchies", "Educational institutions with administrative structures"],
-                "key_points": ["Emphasizes efficiency through standardization", "Uses formal rules and procedures", "Creates clear authority hierarchies"]
-            },
-            {
-                "title": "Corporate Social Responsibility",
-                "explanation": "Business practices emphasizing the importance of ethical and sustainable conduct towards the environment and society. Organizations integrate social and environmental concerns into their business operations and stakeholder interactions.",
-                "examples": ["Environmental sustainability initiatives", "Community development programs", "Ethical supply chain management"],
-                "key_points": ["Balances profit with social impact", "Addresses stakeholder concerns", "Promotes sustainable business practices"]
-            },
-            {
-                "title": "Globalization",
-                "explanation": "The increasing interconnectedness of economies and societies due to advances in information and communication technologies. This process facilitates cross-border trade, cultural exchange, and international collaboration.",
-                "examples": ["Multinational corporations expanding globally", "International trade agreements and partnerships", "Cross-cultural business practices"],
-                "key_points": ["Enables international market access", "Promotes cultural exchange", "Creates competitive advantages"]
-            },
-            {
-                "title": "Narrative",
-                "explanation": "The structured account of events or stories used in organizations to convey meaning, values, and goals to employees. Effective narratives help align organizational culture and guide decision-making processes.",
-                "examples": ["Company origin stories and mission statements", "Brand narratives and marketing campaigns", "Organizational change communication"],
-                "key_points": ["Conveys organizational values and culture", "Guides decision-making processes", "Builds employee engagement and alignment"]
-            },
-            {
-                "title": "Scientific Management",
-                "explanation": "A management theory focusing on optimizing labor productivity by scientifically studying workflows and systematically training employees. This approach emphasizes efficiency through systematic analysis and standardization.",
-                "examples": ["Assembly line production methods", "Time and motion studies", "Standardized training programs"],
-                "key_points": ["Optimizes workflow efficiency", "Uses systematic analysis", "Standardizes work processes"]
-            },
-            {
-                "title": "Competitive Advantage",
-                "explanation": "The attributes or strategies that allow an organization to outperform its rivals by offering unique value propositions. This includes distinctive capabilities, resources, or market positioning that create sustainable competitive barriers.",
-                "examples": ["Proprietary technology and intellectual property", "Strong brand recognition and customer loyalty", "Operational excellence and cost leadership"],
-                "key_points": ["Creates sustainable market position", "Differentiates from competitors", "Delivers unique customer value"]
-            }
-        ]
         
-        summaries = [
-            "Bureaucracy emphasizes hierarchical structures and formalized rules for efficient decision-making",
-            "Corporate Social Responsibility balances profit with ethical and sustainable business practices",
-            "Globalization increases economic and cultural interconnectedness through technology advances",
-            "Narrative structures help organizations convey meaning, values, and goals to stakeholders",
-            "Scientific Management optimizes productivity through systematic workflow analysis and standardization",
-            "Competitive Advantage enables organizations to outperform rivals through unique value propositions",
-            "Organizational culture shapes employee behavior and decision-making processes",
-            "Stakeholder management balances diverse interests and expectations effectively"
-        ]
+        # Generate dynamic content based on lesson title
+        lesson_lower = lesson_title.lower()
+        
+        if "python" in lesson_lower or "programming" in lesson_lower:
+            golden_notes = [
+                {
+                    "title": "Python Fundamentals",
+                    "explanation": "Core programming concepts including variables, data types, control structures, and functions. Understanding these fundamentals is essential for building any Python application.",
+                    "examples": ["Variable assignment and data types", "Conditional statements and loops", "Function definition and calling"],
+                    "key_points": ["Variables store data values", "Control flow manages program logic", "Functions organize reusable code"]
+                },
+                {
+                    "title": "Object-Oriented Programming",
+                    "explanation": "Programming paradigm that organizes code into objects containing data and methods. This approach promotes code reusability, maintainability, and scalability.",
+                    "examples": ["Class definition and instantiation", "Inheritance and polymorphism", "Encapsulation and abstraction"],
+                    "key_points": ["Classes define object blueprints", "Inheritance promotes code reuse", "Encapsulation protects data"]
+                },
+                {
+                    "title": "Data Structures",
+                    "explanation": "Organized ways to store and manage data efficiently. Different structures optimize for various operations like searching, insertion, and deletion.",
+                    "examples": ["Lists, tuples, and dictionaries", "Sets for unique collections", "Custom data structures"],
+                    "key_points": ["Choose structures based on use case", "Understand time complexity", "Optimize for common operations"]
+                }
+            ]
+            summaries = [
+                "Python fundamentals include variables, data types, and control structures",
+                "Object-oriented programming organizes code into reusable classes and objects",
+                "Data structures optimize data storage and retrieval operations",
+                "Functions organize code into reusable, modular components",
+                "Error handling ensures robust and reliable applications",
+                "Libraries and frameworks accelerate development processes"
+            ]
+        elif "data" in lesson_lower or "analytics" in lesson_lower:
+            golden_notes = [
+                {
+                    "title": "Data Analysis Fundamentals",
+                    "explanation": "Systematic approach to examining, cleaning, transforming, and modeling data to discover useful information and support decision-making processes.",
+                    "examples": ["Statistical analysis and visualization", "Data cleaning and preprocessing", "Exploratory data analysis"],
+                    "key_points": ["Start with data exploration", "Clean and validate data", "Use appropriate analysis methods"]
+                },
+                {
+                    "title": "Data Visualization",
+                    "explanation": "Graphical representation of data to communicate insights effectively. Good visualizations make complex data accessible and actionable.",
+                    "examples": ["Charts, graphs, and dashboards", "Interactive visualizations", "Storytelling with data"],
+                    "key_points": ["Choose appropriate chart types", "Design for clarity and impact", "Tell compelling data stories"]
+                },
+                {
+                    "title": "Statistical Methods",
+                    "explanation": "Mathematical techniques for analyzing data patterns, relationships, and trends. Statistics provide the foundation for data-driven decision making.",
+                    "examples": ["Descriptive and inferential statistics", "Hypothesis testing", "Regression analysis"],
+                    "key_points": ["Understand basic statistical concepts", "Apply appropriate tests", "Interpret results correctly"]
+                }
+            ]
+            summaries = [
+                "Data analysis involves systematic examination and transformation of data",
+                "Data visualization communicates insights through graphical representations",
+                "Statistical methods provide mathematical foundation for analysis",
+                "Data cleaning ensures quality and reliability of analysis",
+                "Exploratory analysis reveals patterns and relationships",
+                "Effective visualization tells compelling data stories"
+            ]
+        elif "machine learning" in lesson_lower or "ai" in lesson_lower:
+            golden_notes = [
+                {
+                    "title": "Machine Learning Basics",
+                    "explanation": "Subset of artificial intelligence that enables systems to learn and improve from experience without explicit programming. ML algorithms identify patterns in data to make predictions.",
+                    "examples": ["Supervised and unsupervised learning", "Classification and regression tasks", "Model training and evaluation"],
+                    "key_points": ["Algorithms learn from data patterns", "Different types for different tasks", "Evaluation metrics measure performance"]
+                },
+                {
+                    "title": "Neural Networks",
+                    "explanation": "Computing systems inspired by biological neural networks. These networks process information through interconnected nodes and can learn complex patterns.",
+                    "examples": ["Deep learning architectures", "Convolutional neural networks", "Recurrent neural networks"],
+                    "key_points": ["Multiple layers process information", "Weights adjust during training", "Can learn complex patterns"]
+                },
+                {
+                    "title": "Model Evaluation",
+                    "explanation": "Systematic assessment of machine learning model performance using various metrics and validation techniques to ensure reliable predictions.",
+                    "examples": ["Accuracy, precision, and recall", "Cross-validation techniques", "Bias-variance tradeoff"],
+                    "key_points": ["Use appropriate evaluation metrics", "Validate on unseen data", "Balance bias and variance"]
+                }
+            ]
+            summaries = [
+                "Machine learning enables systems to learn from data without explicit programming",
+                "Neural networks process information through interconnected nodes",
+                "Model evaluation ensures reliable and accurate predictions",
+                "Different algorithms suit different types of problems",
+                "Training data quality directly impacts model performance",
+                "Regularization techniques prevent overfitting"
+            ]
+        else:
+            # Generic business/management content
+            golden_notes = [
+                {
+                    "title": "Strategic Planning",
+                    "explanation": "Systematic process of defining organizational direction and making decisions about allocating resources to pursue this strategy. Effective planning aligns actions with long-term goals.",
+                    "examples": ["SWOT analysis and market research", "Goal setting and KPI development", "Resource allocation and budgeting"],
+                    "key_points": ["Aligns actions with objectives", "Involves stakeholder input", "Requires regular review and adjustment"]
+                },
+                {
+                    "title": "Performance Management",
+                    "explanation": "Continuous process of setting objectives, assessing progress, and providing ongoing coaching and feedback to ensure employees meet their goals and career objectives.",
+                    "examples": ["Goal setting and tracking", "Regular feedback and coaching", "Performance reviews and development"],
+                    "key_points": ["Set clear, measurable objectives", "Provide regular feedback", "Support continuous development"]
+                },
+                {
+                    "title": "Change Management",
+                    "explanation": "Systematic approach to dealing with organizational change, including preparing, supporting, and helping individuals and teams adapt to new processes, technologies, or structures.",
+                    "examples": ["Communication and stakeholder engagement", "Training and support programs", "Monitoring and reinforcement"],
+                    "key_points": ["Communicate vision and benefits", "Provide training and support", "Monitor progress and adjust"]
+                }
+            ]
+            summaries = [
+                "Strategic planning aligns actions with long-term organizational goals",
+                "Performance management ensures continuous improvement and development",
+                "Change management supports successful organizational transitions",
+                "Effective communication is essential for successful implementation",
+                "Regular monitoring and feedback drive continuous improvement",
+                "Stakeholder engagement increases buy-in and success rates"
+            ]
         
         return {
             'golden_notes': golden_notes,
@@ -1883,11 +1955,44 @@ class CourseGenerationService:
                     chapter_timestamp=lesson_data.get('chapter_timestamp', '')
                 )
                 
-                # Generate study notes for each lesson
-                if lesson.lesson_type == 'video' and youtube_video_id:
+                # Generate study notes for each lesson (for all lesson types)
+                if lesson.lesson_type == 'video':
+                    # For video lessons, use video info if available
+                    if youtube_video_id and video_info:
+                        study_notes = self.ai_service.generate_structured_study_notes(
+                            lesson.title,
+                            video_info=video_info
+                        )
+                    else:
+                        # Generate notes based on lesson title and course context
+                        study_notes = self.ai_service.generate_structured_study_notes(
+                            lesson.title,
+                            video_info={
+                                'title': lesson.title,
+                                'description': f"Lesson on {lesson.title} from {course.title}",
+                                'channel_title': 'Course Content'
+                            }
+                        )
+                    
+                    StudyNote.objects.create(
+                        lesson=lesson,
+                        golden_notes=study_notes.get('golden_notes', []),
+                        summaries=study_notes.get('summaries', []),
+                        own_notes=study_notes.get('own_notes', ''),
+                        content=study_notes.get('content', ''),
+                        key_concepts=study_notes.get('key_concepts', []),
+                        code_examples=study_notes.get('code_examples', []),
+                        summary=study_notes.get('summary', '')
+                    )
+                elif lesson.lesson_type == 'notes':
+                    # For notes lessons, generate comprehensive study materials
                     study_notes = self.ai_service.generate_structured_study_notes(
                         lesson.title,
-                        video_info=video_info
+                        video_info={
+                            'title': lesson.title,
+                            'description': f"Comprehensive study materials for {lesson.title}",
+                            'channel_title': 'Study Materials'
+                        }
                     )
                     
                     StudyNote.objects.create(
