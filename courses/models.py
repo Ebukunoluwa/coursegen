@@ -15,6 +15,11 @@ class Course(models.Model):
     youtube_source = models.URLField(blank=True, null=True)  # Single video URL
     playlist_url = models.URLField(blank=True, null=True)    # Playlist URL
     difficulty = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default='beginner')
+    generation_type = models.CharField(max_length=20, choices=[
+        ('link', 'YouTube Link'),
+        ('prompt', 'AI Prompt'),
+        ('topic', 'Topic Only')
+    ], default='link')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

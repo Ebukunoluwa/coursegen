@@ -29,7 +29,9 @@ def generate_course(request):
             course = service.generate_course(
                 youtube_url=serializer.validated_data.get('youtube_url'),
                 topic=serializer.validated_data.get('topic'),
-                difficulty=serializer.validated_data.get('difficulty', 'beginner')
+                difficulty=serializer.validated_data.get('difficulty', 'beginner'),
+                prompt=serializer.validated_data.get('prompt'),
+                generation_type=serializer.validated_data.get('generation_type', 'link')
             )
             
             course_serializer = CourseSerializer(course)

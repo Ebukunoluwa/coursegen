@@ -500,6 +500,110 @@ class AIService:
             self._cache[cache_key] = result
             return result
     
+    def generate_comprehensive_course_structure(self, prompt, difficulty='beginner'):
+        """Generate comprehensive course structure from learning prompt with YouTube content curation"""
+        cache_key = f"comprehensive_course_{prompt}_{difficulty}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+            
+        if not self.client:
+            result = self._generate_mock_comprehensive_structure(prompt, difficulty)
+            self._cache[cache_key] = result
+            return result
+            
+        # Comprehensive prompt for detailed course generation
+        prompt_text = f"""
+        Create a comprehensive learning course for: "{prompt}"
+        Difficulty Level: {difficulty}
+        
+        Follow this detailed process:
+        
+        1. TOPIC ANALYSIS:
+        - Parse the learning intent and identify core subject matter
+        - Extract skill level indicators and specific learning goals
+        - Identify prerequisite concepts and logical learning progression
+        
+        2. KNOWLEDGE MAPPING:
+        - Break down the main topic into prerequisite concepts
+        - Map concept dependencies (what must be learned before what)
+        - Design appropriate skill milestones and checkpoints
+        
+        3. CONTENT STRATEGY:
+        - Plan optimal learning sequence based on concept difficulty
+        - Identify potential knowledge gaps that need filling
+        - Design assessment points and practical applications
+        
+        4. COURSE STRUCTURE:
+        - Group related concepts into logical modules (4-6 modules)
+        - Ensure each module has clear learning objectives
+        - Balance module length and complexity
+        - Create smooth transitions between modules
+        
+        5. LESSON PLANNING:
+        - Break modules into digestible lesson chunks (3-5 lessons per module)
+        - Sequence lessons for optimal knowledge building
+        - Plan mix of theory, examples, and practical application
+        - Design appropriate pacing for {difficulty} level
+        
+        6. YOUTUBE CONTENT CURATION:
+        - For each lesson, suggest relevant YouTube video IDs or search terms
+        - Ensure content quality and teaching effectiveness
+        - Balance different explanation approaches for varied learning styles
+        - Include both theoretical and practical content
+        
+        7. ASSESSMENT INTEGRATION:
+        - Plan quiz placement for optimal retention
+        - Design varied question types per topic
+        - Create progressive difficulty in assessments
+        - Plan final projects or practical applications
+        
+        Format as JSON:
+        {{
+            "title": "Comprehensive Course Title",
+            "description": "Detailed course description",
+            "modules": [
+                {{
+                    "title": "Module Title",
+                    "description": "Module description",
+                    "lessons": [
+                        {{
+                            "title": "Lesson Title",
+                            "description": "Lesson description",
+                            "type": "video",
+                            "duration": 1800,
+                            "youtube_video_id": "suggested_video_id_or_search_term",
+                            "chapter_timestamp": "00:00",
+                            "video_info": {{
+                                "title": "Suggested video title",
+                                "description": "Video description"
+                            }}
+                        }}
+                    ]
+                }}
+            ]
+        }}
+        
+        Ensure the course is comprehensive, well-structured, and suitable for {difficulty} level learners.
+        """
+        
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt_text}],
+                temperature=0.7,
+                max_tokens=2000,
+                timeout=30
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            self._cache[cache_key] = result
+            return result
+        except Exception as e:
+            print(f"Error generating comprehensive course structure: {e}")
+            result = self._generate_mock_comprehensive_structure(prompt, difficulty)
+            self._cache[cache_key] = result
+            return result
+    
     def generate_structured_study_notes(self, lesson_title, video_info=None, chapter_info=None):
         """Generate 3 types of study notes: Golden Notes, Summaries, and Own Notes"""
         cache_key = f"enhanced_study_notes_{lesson_title}_{hash(str(video_info))}_{hash(str(chapter_info))}"
@@ -898,6 +1002,105 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
             'summary': f"Enhanced study guide for {lesson_title} with comprehensive golden notes and quick summaries."
         }
 
+    def _generate_mock_comprehensive_structure(self, prompt, difficulty):
+        """Generate mock comprehensive course structure for prompt-based generation"""
+        return {
+            "title": f"Comprehensive {prompt} Course",
+            "description": f"AI-generated comprehensive course on {prompt} for {difficulty} level learners",
+            "modules": [
+                {
+                    "title": "Introduction to the Topic",
+                    "description": "Foundation concepts and overview",
+                    "lessons": [
+                        {
+                            "title": "Getting Started",
+                            "description": "Introduction to the subject matter",
+                            "type": "video",
+                            "duration": 1800,
+                            "youtube_video_id": "dQw4w9WgXcQ",
+                            "chapter_timestamp": "00:00",
+                            "video_info": {
+                                "title": "Introduction Video",
+                                "description": "Basic introduction to the topic"
+                            }
+                        },
+                        {
+                            "title": "Core Concepts",
+                            "description": "Understanding fundamental principles",
+                            "type": "video",
+                            "duration": 2400,
+                            "youtube_video_id": "dQw4w9WgXcQ",
+                            "chapter_timestamp": "00:00",
+                            "video_info": {
+                                "title": "Core Concepts Video",
+                                "description": "Deep dive into core concepts"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "title": "Intermediate Topics",
+                    "description": "Building on foundational knowledge",
+                    "lessons": [
+                        {
+                            "title": "Advanced Techniques",
+                            "description": "Moving beyond basics",
+                            "type": "video",
+                            "duration": 2100,
+                            "youtube_video_id": "dQw4w9WgXcQ",
+                            "chapter_timestamp": "00:00",
+                            "video_info": {
+                                "title": "Advanced Techniques Video",
+                                "description": "Advanced methods and techniques"
+                            }
+                        },
+                        {
+                            "title": "Practical Applications",
+                            "description": "Real-world implementation",
+                            "type": "video",
+                            "duration": 2700,
+                            "youtube_video_id": "dQw4w9WgXcQ",
+                            "chapter_timestamp": "00:00",
+                            "video_info": {
+                                "title": "Practical Applications Video",
+                                "description": "Hands-on practical examples"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "title": "Advanced Topics",
+                    "description": "Mastery level content",
+                    "lessons": [
+                        {
+                            "title": "Expert Techniques",
+                            "description": "Professional-level skills",
+                            "type": "video",
+                            "duration": 3000,
+                            "youtube_video_id": "dQw4w9WgXcQ",
+                            "chapter_timestamp": "00:00",
+                            "video_info": {
+                                "title": "Expert Techniques Video",
+                                "description": "Expert-level techniques and strategies"
+                            }
+                        },
+                        {
+                            "title": "Final Project",
+                            "description": "Comprehensive project to demonstrate mastery",
+                            "type": "video",
+                            "duration": 3600,
+                            "youtube_video_id": "dQw4w9WgXcQ",
+                            "chapter_timestamp": "00:00",
+                            "video_info": {
+                                "title": "Final Project Video",
+                                "description": "Complete project walkthrough"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+
     def _get_video_transcript(self, video_id):
         """Get video transcript for dynamic content generation"""
         try:
@@ -914,19 +1117,27 @@ class CourseGenerationService:
         self.youtube_service = YouTubeService()
         self.ai_service = AIService()
     
-    def generate_course(self, youtube_url=None, topic=None, difficulty='beginner'):
-        """Generate a course from YouTube URL or topic"""
-        if not youtube_url and not topic:
-            raise ValueError("Either youtube_url or topic must be provided")
+    def generate_course(self, youtube_url=None, topic=None, difficulty='beginner', prompt=None, generation_type=None):
+        """Generate a course from YouTube URL, topic, or learning prompt"""
+        if not youtube_url and not topic and not prompt:
+            raise ValueError("Either youtube_url, topic, or prompt must be provided")
         
-        # Check if it's a playlist
-        playlist_id = self.youtube_service.extract_playlist_id(youtube_url) if youtube_url else None
-        video_id = self.youtube_service.extract_video_id(youtube_url) if youtube_url else None
+        # Handle prompt-based generation
+        if generation_type == 'prompt' and prompt:
+            return self._generate_prompt_course(prompt, difficulty)
         
-        if playlist_id:
-            return self._generate_playlist_course(playlist_id, topic, difficulty)
-        elif video_id:
-            return self._generate_single_video_course(video_id, topic, difficulty)
+        # Handle link-based generation
+        if youtube_url:
+            # Check if it's a playlist
+            playlist_id = self.youtube_service.extract_playlist_id(youtube_url)
+            video_id = self.youtube_service.extract_video_id(youtube_url)
+            
+            if playlist_id:
+                return self._generate_playlist_course(playlist_id, topic, difficulty)
+            elif video_id:
+                return self._generate_single_video_course(video_id, topic, difficulty)
+            else:
+                return self._generate_topic_course(topic, difficulty)
         else:
             return self._generate_topic_course(topic, difficulty)
     
@@ -953,7 +1164,8 @@ class CourseGenerationService:
             description=playlist_info.get('description', '')[:500] + '...' if playlist_info.get('description') else f'Course based on {topic} playlist',
             youtube_source=f"https://www.youtube.com/playlist?list={playlist_id}",
             playlist_url=f"https://www.youtube.com/playlist?list={playlist_id}",
-            difficulty=difficulty
+            difficulty=difficulty,
+            generation_type='link'
         )
         
         module_order = 0
@@ -1176,7 +1388,8 @@ class CourseGenerationService:
             title=video_info.get('title', topic),
             description=video_info.get('description', '')[:500] + '...' if video_info.get('description') else f'Course based on {topic}',
             youtube_source=f"https://www.youtube.com/watch?v={video_id}",
-            difficulty=difficulty
+            difficulty=difficulty,
+            generation_type='link'
         )
         
         if chapters:
@@ -1428,7 +1641,8 @@ class CourseGenerationService:
             title=f"{topic or 'Python'} Course - Mock Data",
             description=f"Mock course for testing. Video: {video_id}",
             youtube_source=youtube_url or "https://www.youtube.com/watch?v=mock",
-            difficulty=difficulty
+            difficulty=difficulty,
+            generation_type='link'
         )
         
         # Create mock modules
@@ -1485,7 +1699,8 @@ class CourseGenerationService:
         course = Course.objects.create(
             title=course_structure['title'],
             description=course_structure['description'],
-            difficulty=difficulty
+            difficulty=difficulty,
+            generation_type='topic'
         )
         
         for module_data in course_structure['modules']:
@@ -1509,6 +1724,58 @@ class CourseGenerationService:
                     quiz = Quiz.objects.create(
                         lesson=lesson,
                         questions=quiz_questions
+                    )
+        
+        return course 
+
+    def _generate_prompt_course(self, prompt, difficulty):
+        """Generate a comprehensive course from a learning prompt"""
+        # Create course with prompt as title
+        course = Course.objects.create(
+            title=prompt,
+            description=f'AI-generated course: {prompt}',
+            difficulty=difficulty,
+            generation_type='prompt'
+        )
+        
+        # Generate comprehensive course structure using AI
+        course_structure = self.ai_service.generate_comprehensive_course_structure(prompt, difficulty)
+        
+        # Create modules and lessons
+        for i, module_data in enumerate(course_structure.get('modules', [])):
+            module = Module.objects.create(
+                course=course,
+                title=module_data['title'],
+                order=i
+            )
+            
+            for j, lesson_data in enumerate(module_data.get('lessons', [])):
+                lesson = Lesson.objects.create(
+                    module=module,
+                    title=lesson_data['title'],
+                    lesson_type=lesson_data.get('type', 'video'),
+                    duration=lesson_data.get('duration', 0),
+                    order=j,
+                    youtube_video_id=lesson_data.get('youtube_video_id'),
+                    chapter_timestamp=lesson_data.get('chapter_timestamp', '')
+                )
+                
+                # Generate study notes for each lesson
+                if lesson.lesson_type == 'video':
+                    study_notes = self.ai_service.generate_structured_study_notes(
+                        lesson.title,
+                        video_info=lesson_data.get('video_info')
+                    )
+                    
+                    StudyNote.objects.create(
+                        lesson=lesson,
+                        golden_notes=study_notes.get('golden_notes', []),
+                        summaries=study_notes.get('summaries', []),
+                        own_notes=study_notes.get('own_notes', ''),
+                        content=study_notes.get('content', ''),
+                        key_concepts=study_notes.get('key_concepts', []),
+                        code_examples=study_notes.get('code_examples', []),
+                        summary=study_notes.get('summary', '')
                     )
         
         return course 

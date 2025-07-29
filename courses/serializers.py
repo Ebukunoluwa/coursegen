@@ -63,7 +63,7 @@ class CourseSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Course
-        fields = ['id', 'title', 'description', 'youtube_source', 'playlist_url', 'difficulty', 'modules', 'is_playlist', 'video_count', 'created_at', 'updated_at']
+        fields = ['id', 'title', 'description', 'youtube_source', 'playlist_url', 'difficulty', 'generation_type', 'modules', 'is_playlist', 'video_count', 'created_at', 'updated_at']
     
     def get_is_playlist(self, obj):
         return obj.is_playlist()
@@ -83,9 +83,11 @@ class UserProgressSerializer(serializers.ModelSerializer):
 class CourseGenerationRequestSerializer(serializers.Serializer):
     youtube_url = serializers.URLField(required=False, allow_blank=True)
     topic = serializers.CharField(required=False, allow_blank=True)
+    prompt = serializers.CharField(required=False, allow_blank=True)
     difficulty = serializers.ChoiceField(choices=Course.DIFFICULTY_CHOICES, default='beginner')
+    generation_type = serializers.CharField(required=False, default='link')
     
     def validate(self, data):
-        if not data.get('youtube_url') and not data.get('topic'):
-            raise serializers.ValidationError("Either youtube_url or topic must be provided")
+        if not data.get('youtube_url') and not data.get('topic') and not data.get('prompt'):
+            raise serializers.ValidationError("Either youtube_url, topic, or prompt must be provided")
         return data 
