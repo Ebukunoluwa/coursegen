@@ -884,7 +884,7 @@ const VideoControls = ({ videoId, timestamp, onTimeUpdate }) => {
       <div className="bg-gray-900 p-3 rounded-lg">
         {/* Progress Bar - Clickable */}
         <div 
-          className="relative h-6 bg-gray-700 rounded-full mb-3 cursor-pointer hover:bg-gray-600 transition-colors duration-200 border-2 border-transparent hover:border-primary-300"
+          className="relative h-2 bg-gray-700 rounded-full mb-3 cursor-pointer hover:bg-gray-600 transition-colors duration-200 border-2 border-transparent hover:border-primary-300"
           onClick={(e) => {
             console.log('PROGRESS BAR CLICKED!');
             handleProgressBarClick(e);
@@ -906,10 +906,10 @@ const VideoControls = ({ videoId, timestamp, onTimeUpdate }) => {
           
           {/* Progress thumb */}
           <div 
-            className={`absolute top-1/2 transform -translate-y-1/2 w-6 h-6 bg-primary-500 rounded-full shadow-lg transition-all duration-200 ${
+            className={`absolute top-1/2 transform -translate-y-1/2 w-3 h-3 bg-primary-500 rounded-full shadow-lg transition-all duration-200 ${
               isSeeking ? 'opacity-100 scale-110' : 'opacity-0 hover:opacity-100'
             }`}
-            style={{ left: `${(currentTime / duration) * 100}%`, marginLeft: '-12px' }}
+            style={{ left: `${(currentTime / duration) * 100}%`, marginLeft: '-6px' }}
           ></div>
           
           {/* Click overlay for better responsiveness */}
