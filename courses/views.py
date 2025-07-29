@@ -4,10 +4,11 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
-from .models import Course, Module, Lesson, Quiz, UserProgress
+from .models import Course, Module, Lesson, Quiz, UserProgress, StudyNote
 from .serializers import (
     CourseSerializer, ModuleSerializer, LessonSerializer, 
-    QuizSerializer, UserProgressSerializer, CourseGenerationRequestSerializer
+    QuizSerializer, UserProgressSerializer, CourseGenerationRequestSerializer,
+    StudyNoteSerializer
 )
 from .services import CourseGenerationService
 from django.db import models
@@ -93,19 +94,111 @@ def lesson_detail(request, lesson_id):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+def study_notes_detail(request, lesson_id):
+    """Get enhanced study notes for a lesson"""
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+    if not lesson.is_study_notes():
+        return Response(
+            {'error': 'This lesson does not have study notes'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Check if regeneration is requested
+    regenerate = request.GET.get('regenerate', False)
+    
+    # Get or create study notes
+    study_note, created = StudyNote.objects.get_or_create(lesson=lesson)
+    
+    # If newly created or regeneration requested, generate the notes
+    if created or regenerate:
+        from .services import AIService
+        ai_service = AIService()
+        video_info = None
+        if lesson.youtube_video_id:
+            from .services import YouTubeService
+            yt_service = YouTubeService()
+            video_info = yt_service.get_video_info(lesson.youtube_video_id)
+        
+        enhanced_notes = ai_service.generate_structured_study_notes(
+            lesson.title, 
+            video_info=video_info
+        )
+        
+        # Update the study note with enhanced content
+        study_note.golden_notes = enhanced_notes.get('golden_notes', [])
+        study_note.summaries = enhanced_notes.get('summaries', [])
+        study_note.content = enhanced_notes.get('content', '')
+        study_note.key_concepts = enhanced_notes.get('key_concepts', [])
+        study_note.code_examples = enhanced_notes.get('code_examples', [])
+        study_note.summary = enhanced_notes.get('summary', '')
+        study_note.save()
+    
+    serializer = StudyNoteSerializer(study_note)
+    return Response(serializer.data)
+
+@api_view(['PUT', 'PATCH'])
+@permission_classes([AllowAny])
+def update_own_notes(request, lesson_id):
+    """Update user's own notes for a lesson"""
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+    if not lesson.is_study_notes():
+        return Response(
+            {'error': 'This lesson does not have study notes'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Get or create study notes
+    study_note, created = StudyNote.objects.get_or_create(lesson=lesson)
+    
+    # Update own notes
+    from .serializers import OwnNotesUpdateSerializer
+    serializer = OwnNotesUpdateSerializer(study_note, data=request.data, partial=True)
+    
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    else:
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def quiz_detail(request, lesson_id):
     """Get quiz for a lesson"""
     lesson = get_object_or_404(Lesson, id=lesson_id)
-    quiz = get_object_or_404(Quiz, lesson=lesson)
-    serializer = QuizSerializer(quiz)
-    return Response(serializer.data)
+    if not lesson.lesson_type == 'quiz':
+        return Response(
+            {'error': 'This lesson is not a quiz lesson'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        quiz = Quiz.objects.get(lesson=lesson)
+        serializer = QuizSerializer(quiz)
+        return Response(serializer.data)
+    except Quiz.DoesNotExist:
+        return Response(
+            {'error': 'Quiz not found for this lesson'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def submit_quiz(request, lesson_id):
     """Submit quiz answers and get score"""
     lesson = get_object_or_404(Lesson, id=lesson_id)
-    quiz = get_object_or_404(Quiz, lesson=lesson)
+    if not lesson.lesson_type == 'quiz':
+        return Response(
+            {'error': 'This lesson is not a quiz lesson'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        quiz = Quiz.objects.get(lesson=lesson)
+    except Quiz.DoesNotExist:
+        return Response(
+            {'error': 'Quiz not found for this lesson'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
     
     answers = request.data.get('answers', [])
     if not answers:

@@ -67,6 +67,25 @@ export const getLesson = async (lessonId) => {
   }
 };
 
+// Study notes functionality
+export const getStudyNotes = async (lessonId) => {
+  try {
+    const response = await api.get(`/lessons/${lessonId}/study-notes/`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const updateOwnNotes = async (lessonId, data) => {
+  try {
+    const response = await api.put(`/lessons/${lessonId}/own-notes/`, data);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
 // Quiz functionality
 export const getQuiz = async (lessonId) => {
   try {
@@ -117,4 +136,7 @@ export const getDashboardStats = async (userId = 1) => {
   } catch (error) {
     throw error.response?.data || error.message;
   }
-}; 
+};
+
+// Export the api instance as default for direct use
+export default api; 

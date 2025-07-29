@@ -1,5 +1,36 @@
 from rest_framework import serializers
-from .models import Course, Module, Lesson, Quiz, UserProgress
+from .models import Course, Module, Lesson, Quiz, UserProgress, StudyNote
+
+class StudyNoteSerializer(serializers.ModelSerializer):
+    golden_notes_cards = serializers.SerializerMethodField()
+    summaries_list = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = StudyNote
+        fields = [
+            'id', 'golden_notes', 'summaries', 'own_notes', 
+            'golden_notes_cards', 'summaries_list',
+            'content', 'key_concepts', 'code_examples', 'summary', 
+            'created_at', 'updated_at'
+        ]
+    
+    def get_golden_notes_cards(self, obj):
+        return obj.get_golden_notes_cards()
+    
+    def get_summaries_list(self, obj):
+        return obj.get_summaries_list()
+
+class OwnNotesUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for updating user's own notes"""
+    
+    class Meta:
+        model = StudyNote
+        fields = ['own_notes']
+    
+    def update(self, instance, validated_data):
+        instance.own_notes = validated_data.get('own_notes', instance.own_notes)
+        instance.save()
+        return instance
 
 class QuizSerializer(serializers.ModelSerializer):
     class Meta:
@@ -8,10 +39,15 @@ class QuizSerializer(serializers.ModelSerializer):
 
 class LessonSerializer(serializers.ModelSerializer):
     quiz = QuizSerializer(read_only=True)
+    study_note = StudyNoteSerializer(read_only=True)
+    lesson_type_display = serializers.CharField(source='get_lesson_type_display', read_only=True)
     
     class Meta:
         model = Lesson
-        fields = ['id', 'title', 'youtube_video_id', 'ai_notes', 'duration', 'order', 'chapter_timestamp', 'quiz', 'created_at']
+        fields = [
+            'id', 'title', 'lesson_type', 'lesson_type_display', 'youtube_video_id', 
+            'ai_notes', 'duration', 'order', 'chapter_timestamp', 'quiz', 'study_note', 'created_at'
+        ]
 
 class ModuleSerializer(serializers.ModelSerializer):
     lessons = LessonSerializer(many=True, read_only=True)

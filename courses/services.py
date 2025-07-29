@@ -2,11 +2,14 @@ import re
 import requests
 import openai
 from django.conf import settings
-from .models import Course, Module, Lesson, Quiz
+from .models import Course, Module, Lesson, Quiz, StudyNote
+import json
+import time
 
 class YouTubeService:
     def __init__(self):
         self.api_key = settings.YOUTUBE_API_KEY
+        self._cache = {}  # Simple in-memory cache
     
     def extract_video_id(self, url):
         """Extract YouTube video ID from URL"""
@@ -35,10 +38,14 @@ class YouTubeService:
         return None
     
     def get_playlist_videos(self, playlist_id):
-        """Get all videos from a YouTube playlist"""
+        """Get all videos from a YouTube playlist with caching"""
+        cache_key = f"playlist_{playlist_id}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+            
         if not self.api_key or self.api_key == 'your-youtube-api-key-here':
             # Return mock data when API key is not available
-            return [
+            mock_data = [
                 {
                     'id': 'mock_video_1',
                     'title': 'Mock Video 1',
@@ -58,6 +65,8 @@ class YouTubeService:
                     'channel': 'Mock Channel'
                 }
             ]
+            self._cache[cache_key] = mock_data
+            return mock_data
             
         url = "https://www.googleapis.com/youtube/v3/playlistItems"
         params = {
@@ -75,7 +84,7 @@ class YouTubeService:
                 if next_page_token:
                     params['pageToken'] = next_page_token
                 
-                response = requests.get(url, params=params)
+                response = requests.get(url, params=params, timeout=10)  # Reduced timeout
                 response.raise_for_status()
                 data = response.json()
                 
@@ -89,7 +98,7 @@ class YouTubeService:
                         'published_at': item['snippet']['publishedAt']
                     }
                     
-                    # Get additional video details
+                    # Get additional video details (cached)
                     video_details = self.get_video_info(video_id)
                     if video_details:
                         video_info.update(video_details)
@@ -103,7 +112,7 @@ class YouTubeService:
         except Exception as e:
             print(f"Error fetching playlist videos: {e}")
             # Return mock data on error
-            return [
+            error_data = [
                 {
                     'id': 'error_video_1',
                     'title': 'Error Video 1',
@@ -114,19 +123,28 @@ class YouTubeService:
                     'channel': 'Unknown Channel'
                 }
             ]
+            self._cache[cache_key] = error_data
+            return error_data
         
+        self._cache[cache_key] = videos
         return videos
     
     def get_playlist_info(self, playlist_id):
-        """Get playlist information from YouTube API"""
+        """Get playlist information from YouTube API with caching"""
+        cache_key = f"playlist_info_{playlist_id}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+            
         if not self.api_key or self.api_key == 'your-youtube-api-key-here':
             # Return mock data when API key is not available
-            return {
+            mock_data = {
                 'title': f'Mock Playlist {playlist_id}',
                 'description': 'This is a mock playlist. Please add your YouTube API key to get real playlist information.',
                 'channel_title': 'Mock Channel',
                 'published_at': '2023-01-01T00:00:00Z'
             }
+            self._cache[cache_key] = mock_data
+            return mock_data
             
         try:
             url = f"https://www.googleapis.com/youtube/v3/playlists"
@@ -136,39 +154,49 @@ class YouTubeService:
                 'key': self.api_key
             }
             
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=10)  # Reduced timeout
             response.raise_for_status()
             
             data = response.json()
             if data.get('items'):
                 playlist = data['items'][0]['snippet']
-                return {
+                result = {
                     'title': playlist.get('title', ''),
                     'description': playlist.get('description', ''),
                     'channel_title': playlist.get('channelTitle', ''),
                     'published_at': playlist.get('publishedAt', '')
                 }
+                self._cache[cache_key] = result
+                return result
             return None
         except Exception as e:
             print(f"Error fetching playlist info: {e}")
             # Return mock data on error
-            return {
+            error_data = {
                 'title': f'Error Playlist {playlist_id}',
                 'description': f'Could not fetch playlist information. Error: {e}',
                 'channel_title': 'Unknown Channel',
                 'published_at': '2023-01-01T00:00:00Z'
             }
+            self._cache[cache_key] = error_data
+            return error_data
     
     def get_video_info(self, video_id):
-        """Get video information from YouTube API"""
+        """Get video information from YouTube API with caching"""
+        cache_key = f"video_info_{video_id}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+            
         if not self.api_key or self.api_key == 'your-youtube-api-key-here':
             # Return mock data when API key is not available
-            return {
+            mock_data = {
                 'title': f'Video {video_id}',
                 'description': f'This is a mock description for video {video_id}. Please add your YouTube API key to get real video information.',
                 'duration': 3600,  # 1 hour default
                 'channel': 'Mock Channel'
             }
+            self._cache[cache_key] = mock_data
+            return mock_data
             
         url = "https://www.googleapis.com/youtube/v3/videos"
         params = {
@@ -178,27 +206,31 @@ class YouTubeService:
         }
         
         try:
-            response = requests.get(url, params=params, timeout=15)  # Add timeout
+            response = requests.get(url, params=params, timeout=10)  # Reduced timeout
             response.raise_for_status()
             data = response.json()
             
             if data['items']:
                 video = data['items'][0]
-                return {
+                result = {
                     'title': video['snippet']['title'],
                     'description': video['snippet']['description'],
                     'duration': self._parse_duration(video['contentDetails']['duration']),
                     'channel': video['snippet']['channelTitle']
                 }
+                self._cache[cache_key] = result
+                return result
         except Exception as e:
             print(f"Error fetching YouTube video info: {e}")
             # Return mock data on error
-            return {
+            error_data = {
                 'title': f'Video {video_id}',
                 'description': f'Could not fetch video information. Error: {e}',
                 'duration': 3600,  # 1 hour default
                 'channel': 'Unknown Channel'
             }
+            self._cache[cache_key] = error_data
+            return error_data
         
         return None
     
@@ -391,39 +423,39 @@ class AIService:
             self.client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
         else:
             self.client = None
+        self._cache = {}  # Simple in-memory cache for AI responses
     
     def generate_course_structure(self, topic, video_info=None, difficulty='beginner', chapters=None):
-        """Generate course structure with AI notes included"""
-        if not self.client:
-            return self._generate_mock_structure(topic, difficulty, chapters)
+        """Generate course structure with AI notes included - optimized for speed"""
+        cache_key = f"course_structure_{topic}_{difficulty}_{hash(str(chapters))}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
             
+        if not self.client:
+            result = self._generate_mock_structure(topic, difficulty, chapters)
+            self._cache[cache_key] = result
+            return result
+            
+        # Simplified prompt for faster response
         prompt_parts = [
-            f"Generate a comprehensive course structure for '{topic}' at {difficulty} level."
+            f"Generate a concise course structure for '{topic}' at {difficulty} level."
         ]
         
         if video_info:
-            prompt_parts.append(f"Based on the video: {video_info.get('title', 'Unknown')}")
-            if video_info.get('description'):
-                prompt_parts.append(f"Video description: {video_info['description'][:500]}...")
+            prompt_parts.append(f"Based on: {video_info.get('title', 'Unknown')}")
         
         if chapters:
-            prompt_parts.append("Use these video chapters to structure the course:")
-            for chapter in chapters[:8]:  # Limit to 8 chapters
+            prompt_parts.append("Use these chapters:")
+            for chapter in chapters[:6]:  # Reduced from 8 to 6
                 prompt_parts.append(f"- {chapter['timestamp']}: {chapter['title']}")
         
         prompt = "\n".join(prompt_parts) + """
         
-        Generate a complete course structure with:
+        Generate a course structure with:
         1. Course title and description
-        2. 3-5 modules, each with 2-4 lessons
-        3. Each lesson should have a title, brief description, AND comprehensive AI notes
-        4. Include quiz questions for each lesson (3-5 multiple choice questions)
-        
-        For each lesson, include detailed AI notes covering:
-        - Key concepts and definitions
-        - Important points to remember
-        - Examples and explanations
-        - Practical tips and best practices
+        2. 2-3 modules, each with 2-3 lessons (reduced for speed)
+        3. Each lesson should have a title and brief description
+        4. Include 2-3 quiz questions per lesson
         
         Format as JSON:
         {
@@ -436,7 +468,6 @@ class AIService:
                         {
                             "title": "Lesson Title",
                             "description": "Lesson description",
-                            "ai_notes": "Comprehensive AI-generated notes for this lesson including key concepts, examples, and best practices...",
                             "quiz_questions": [
                                 {
                                     "question": "Question text",
@@ -455,16 +486,232 @@ class AIService:
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.7,
-                max_tokens=1500,  # Reduced for faster response
-                timeout=30  # Add timeout
+                temperature=0.5,  # Reduced for consistency
+                max_tokens=800,  # Further reduced for speed
+                timeout=15  # Reduced timeout
             )
             
-            import json
-            return json.loads(response.choices[0].message.content)
+            result = json.loads(response.choices[0].message.content)
+            self._cache[cache_key] = result
+            return result
         except Exception as e:
             print(f"Error generating course structure: {e}")
-            return self._generate_mock_structure(topic, difficulty, chapters)
+            result = self._generate_mock_structure(topic, difficulty, chapters)
+            self._cache[cache_key] = result
+            return result
+    
+    def generate_structured_study_notes(self, lesson_title, video_info=None, chapter_info=None):
+        """Generate 3 types of study notes: Golden Notes, Summaries, and Own Notes"""
+        cache_key = f"enhanced_study_notes_{lesson_title}_{hash(str(video_info))}_{hash(str(chapter_info))}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+            
+        if not self.client:
+            mock_notes = self._generate_mock_enhanced_notes(lesson_title)
+            self._cache[cache_key] = mock_notes
+            return mock_notes
+        
+        # Get video transcript for dynamic content
+        transcript = ""
+        if video_info and video_info.get('id'):
+            transcript = self._get_video_transcript(video_info['id'])
+        
+        # Create context for the notes
+        context = f"Module: {lesson_title}"
+        if video_info:
+            context += f"\nVideo: {video_info.get('title', '')}"
+            if video_info.get('description'):
+                context += f"\nDescription: {video_info['description'][:500]}..."
+        
+        # If this is a module with multiple lessons, include lesson information
+        if chapter_info and chapter_info.get('lessons'):
+            context += f"\n\nThis module contains the following lessons:"
+            for i, lesson in enumerate(chapter_info['lessons'], 1):
+                context += f"\n{i}. {lesson.get('title', 'Unknown lesson')}"
+                if lesson.get('chapter_timestamp'):
+                    context += f" (starts at {lesson['chapter_timestamp']})"
+        
+        # Add transcript to context for dynamic generation
+        if transcript:
+            context += f"\n\nVideo Transcript:\n{transcript[:2000]}..."  # Limit transcript length
+        
+        # Generate Golden Notes (Deep, comprehensive explanations)
+        golden_notes_prompt = f"""
+        {context}
+        
+        Generate GOLDEN NOTES for this lesson based on the actual video content and transcript provided. These should be deep, comprehensive explanations that expand beyond the video content with additional context and examples.
+        
+        Create 5-8 concept cards in this JSON format based on the actual video content:
+        [
+            {{
+                "title": "Concept Title (based on actual video content)",
+                "explanation": "A comprehensive definition and explanation that goes beyond basic understanding. Include academic context, real-world applications, and deeper insights. Make it educational and thorough based on the video content.",
+                "examples": ["Specific real-world example 1", "Industry application 2", "Case study 3"],
+                "key_points": ["Critical insight 1", "Important detail 2", "Key understanding 3"]
+            }}
+        ]
+        
+        Focus on the actual concepts, topics, and themes discussed in the video. Make each concept card comprehensive and educational, providing deep insights that go beyond basic understanding. Use formal, academic language similar to university-level content.
+        """
+        
+        # Generate Summaries (Quick, scannable bullet points)
+        summaries_prompt = f"""
+        {context}
+        
+        Generate SUMMARIES for this lesson based on the actual video content and transcript provided. These should be quick, scannable bullet points of key concepts (1-2 sentences each).
+        
+        Create 8-12 summary points in this JSON format based on the actual video content:
+        [
+            "Concise definition and explanation of key concept 1 from the video",
+            "Quick summary of important theory or practice 2 from the video", 
+            "Brief explanation of critical business concept 3 from the video"
+        ]
+        
+        Make each summary point concise, clear, and easy to scan for quick review. Focus on the actual content discussed in the video with formal language.
+        """
+        
+        try:
+            # Generate Golden Notes
+            golden_response = self.client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": golden_notes_prompt}],
+                temperature=0.3,
+                max_tokens=1000,
+                timeout=20
+            )
+            
+            # Generate Summaries
+            summaries_response = self.client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": summaries_prompt}],
+                temperature=0.3,
+                max_tokens=600,
+                timeout=15
+            )
+            
+            # Parse responses
+            golden_notes_content = golden_response.choices[0].message.content.strip()
+            summaries_content = summaries_response.choices[0].message.content.strip()
+            
+            # Parse JSON responses
+            golden_notes = self._parse_json_response(golden_notes_content)
+            summaries = self._parse_json_response(summaries_content)
+            
+            # Create enhanced notes structure
+            enhanced_notes = {
+                'golden_notes': golden_notes,
+                'summaries': summaries,
+                'own_notes': "",  # Empty for user to fill
+                'content': f"# 📝 {lesson_title} - Enhanced Study Guide\n\n## Golden Notes\n{self._format_golden_notes(golden_notes)}\n\n## Summaries\n{self._format_summaries(summaries)}",
+                'key_concepts': [card['title'] for card in golden_notes],
+                'code_examples': [],
+                'summary': f"Enhanced study guide for {lesson_title} with comprehensive golden notes and quick summaries."
+            }
+            
+            self._cache[cache_key] = enhanced_notes
+            return enhanced_notes
+            
+        except Exception as e:
+            print(f"Error generating enhanced study notes: {e}")
+            mock_notes = self._generate_mock_enhanced_notes(lesson_title)
+            self._cache[cache_key] = mock_notes
+            return mock_notes
+    
+    def _parse_json_response(self, content):
+        """Parse JSON response from AI, with fallback to structured parsing"""
+        try:
+            # Try to extract JSON from the response
+            import json
+            # Find JSON array in the content
+            start = content.find('[')
+            end = content.rfind(']') + 1
+            if start != -1 and end != 0:
+                json_str = content[start:end]
+                return json.loads(json_str)
+        except:
+            pass
+        
+        # Fallback: return empty array
+        return []
+    
+    def _format_golden_notes(self, golden_notes):
+        """Format golden notes for markdown display"""
+        if not golden_notes:
+            return "No golden notes available."
+        
+        formatted = ""
+        for i, card in enumerate(golden_notes, 1):
+            formatted += f"\n### {i}. {card.get('title', 'Concept')}\n"
+            formatted += f"{card.get('explanation', 'No explanation available.')}\n"
+            
+            if card.get('examples'):
+                formatted += "\n**Examples:**\n"
+                for example in card['examples']:
+                    formatted += f"- {example}\n"
+            
+            if card.get('key_points'):
+                formatted += "\n**Key Points:**\n"
+                for point in card['key_points']:
+                    formatted += f"- {point}\n"
+            formatted += "\n"
+        
+        return formatted
+    
+    def _format_summaries(self, summaries):
+        """Format summaries for markdown display"""
+        if not summaries:
+            return "No summaries available."
+        
+        formatted = ""
+        for i, summary in enumerate(summaries, 1):
+            formatted += f"{i}. {summary}\n"
+        
+        return formatted
+    
+    def _generate_mock_study_notes(self, lesson_title):
+        """Generate mock study notes when AI is not available"""
+        content = f"""# 📝 {lesson_title} - Complete Study Guide
+
+## 🎯 Key Concepts
+- Understanding the fundamentals of {lesson_title.lower()}
+- Key principles and best practices
+- Important concepts to remember
+- Advanced techniques and applications
+- Common patterns and solutions
+
+## 💻 Code Examples
+```python
+# Example code for {lesson_title.lower()}
+def example_function():
+    return "This is an example"
+
+# Advanced implementation
+class AdvancedExample:
+    def __init__(self):
+        self.data = []
+    
+    def process_data(self):
+        return "Processed data"
+```
+
+## 📋 Quick Summary
+This module covers the essential concepts of {lesson_title.lower()}. Understanding these fundamentals is crucial for building a strong foundation. The lessons provide comprehensive coverage of key topics, practical examples, and real-world applications."""
+        
+        return {
+            'content': content,
+            'key_concepts': [
+                f"Understanding the fundamentals of {lesson_title.lower()}",
+                "Key principles and best practices",
+                "Important concepts to remember",
+                "Advanced techniques and applications",
+                "Common patterns and solutions"
+            ],
+            'code_examples': [
+                f"# Example code for {lesson_title.lower()}\ndef example_function():\n    return \"This is an example\"",
+                f"# Advanced implementation\nclass AdvancedExample:\n    def __init__(self):\n        self.data = []\n    \n    def process_data(self):\n        return \"Processed data\""
+            ],
+            'summary': f"This module covers the essential concepts of {lesson_title.lower()}. Understanding these fundamentals is crucial for building a strong foundation. The lessons provide comprehensive coverage of key topics, practical examples, and real-world applications."
+        }
     
     def generate_lesson_notes(self, lesson_title, video_transcript=None):
         """Generate AI notes for a lesson"""
@@ -589,6 +836,79 @@ class AIService:
             "modules": modules
         }
 
+    def _generate_mock_enhanced_notes(self, lesson_title):
+        """Generate mock enhanced notes with 3 types: Golden Notes, Summaries, and Own Notes"""
+        golden_notes = [
+            {
+                "title": "Bureaucracy",
+                "explanation": "An organizational form characterized by hierarchical structures and formalized rules that guide impersonal and rational decision-making. This management approach emphasizes efficiency through standardized procedures and clear authority chains.",
+                "examples": ["Government agencies and departments", "Large corporations with formal hierarchies", "Educational institutions with administrative structures"],
+                "key_points": ["Emphasizes efficiency through standardization", "Uses formal rules and procedures", "Creates clear authority hierarchies"]
+            },
+            {
+                "title": "Corporate Social Responsibility",
+                "explanation": "Business practices emphasizing the importance of ethical and sustainable conduct towards the environment and society. Organizations integrate social and environmental concerns into their business operations and stakeholder interactions.",
+                "examples": ["Environmental sustainability initiatives", "Community development programs", "Ethical supply chain management"],
+                "key_points": ["Balances profit with social impact", "Addresses stakeholder concerns", "Promotes sustainable business practices"]
+            },
+            {
+                "title": "Globalization",
+                "explanation": "The increasing interconnectedness of economies and societies due to advances in information and communication technologies. This process facilitates cross-border trade, cultural exchange, and international collaboration.",
+                "examples": ["Multinational corporations expanding globally", "International trade agreements and partnerships", "Cross-cultural business practices"],
+                "key_points": ["Enables international market access", "Promotes cultural exchange", "Creates competitive advantages"]
+            },
+            {
+                "title": "Narrative",
+                "explanation": "The structured account of events or stories used in organizations to convey meaning, values, and goals to employees. Effective narratives help align organizational culture and guide decision-making processes.",
+                "examples": ["Company origin stories and mission statements", "Brand narratives and marketing campaigns", "Organizational change communication"],
+                "key_points": ["Conveys organizational values and culture", "Guides decision-making processes", "Builds employee engagement and alignment"]
+            },
+            {
+                "title": "Scientific Management",
+                "explanation": "A management theory focusing on optimizing labor productivity by scientifically studying workflows and systematically training employees. This approach emphasizes efficiency through systematic analysis and standardization.",
+                "examples": ["Assembly line production methods", "Time and motion studies", "Standardized training programs"],
+                "key_points": ["Optimizes workflow efficiency", "Uses systematic analysis", "Standardizes work processes"]
+            },
+            {
+                "title": "Competitive Advantage",
+                "explanation": "The attributes or strategies that allow an organization to outperform its rivals by offering unique value propositions. This includes distinctive capabilities, resources, or market positioning that create sustainable competitive barriers.",
+                "examples": ["Proprietary technology and intellectual property", "Strong brand recognition and customer loyalty", "Operational excellence and cost leadership"],
+                "key_points": ["Creates sustainable market position", "Differentiates from competitors", "Delivers unique customer value"]
+            }
+        ]
+        
+        summaries = [
+            "Bureaucracy emphasizes hierarchical structures and formalized rules for efficient decision-making",
+            "Corporate Social Responsibility balances profit with ethical and sustainable business practices",
+            "Globalization increases economic and cultural interconnectedness through technology advances",
+            "Narrative structures help organizations convey meaning, values, and goals to stakeholders",
+            "Scientific Management optimizes productivity through systematic workflow analysis and standardization",
+            "Competitive Advantage enables organizations to outperform rivals through unique value propositions",
+            "Organizational culture shapes employee behavior and decision-making processes",
+            "Stakeholder management balances diverse interests and expectations effectively"
+        ]
+        
+        return {
+            'golden_notes': golden_notes,
+            'summaries': summaries,
+            'own_notes': "",
+            'content': f"# 📝 {lesson_title} - Enhanced Study Guide\n\n## Golden Notes\n{self._format_golden_notes(golden_notes)}\n\n## Summaries\n{self._format_summaries(summaries)}",
+            'key_concepts': [card['title'] for card in golden_notes],
+            'code_examples': [],
+            'summary': f"Enhanced study guide for {lesson_title} with comprehensive golden notes and quick summaries."
+        }
+
+    def _get_video_transcript(self, video_id):
+        """Get video transcript for dynamic content generation"""
+        try:
+            from .services import YouTubeService
+            yt_service = YouTubeService()
+            transcript = yt_service.get_video_transcript(video_id)
+            return transcript if transcript else ""
+        except Exception as e:
+            print(f"Error getting transcript for video {video_id}: {e}")
+            return ""
+
 class CourseGenerationService:
     def __init__(self):
         self.youtube_service = YouTubeService()
@@ -662,7 +982,7 @@ class CourseGenerationService:
             # Create module for this video
             if chapters:
                 # Structure chapters into modules for this video
-                video_modules = self._structure_chapters_into_modules(chapters, video_id, video_info)
+                video_modules = self._structure_chapters_with_study_notes(chapters, video_id, video_info)
                 
                 for module_data in video_modules:
                     module = Module.objects.create(
@@ -672,16 +992,46 @@ class CourseGenerationService:
                         video_id=video_id
                     )
                     
+                    lesson_order = 0
                     for lesson_data in module_data['lessons']:
-                        lesson = Lesson.objects.create(
+                        # Create video lesson
+                        video_lesson = Lesson.objects.create(
                             module=module,
                             title=lesson_data['title'],
+                            lesson_type='video',
                             youtube_video_id=video_id,
-                            ai_notes=lesson_data.get('ai_notes', ''),
                             duration=lesson_data.get('duration', 0),
-                            order=lesson_data.get('order', 0),
+                            order=lesson_order,
                             chapter_timestamp=lesson_data.get('chapter_timestamp', '')
                         )
+                        lesson_order += 1
+                    
+                    # Create ONE study notes lesson per module (combining all lessons)
+                    module_title = module_data['title'].replace('Module ', '').replace(':', '')
+                    study_notes = self.ai_service.generate_structured_study_notes(
+                        f"Complete {module_title} Study Guide", 
+                        video_info, 
+                        {'title': module_title, 'lessons': module_data['lessons']}
+                    )
+                    
+                    notes_lesson = Lesson.objects.create(
+                        module=module,
+                        title=f"📝 Complete Study Notes - {module_title}",
+                        lesson_type='notes',
+                        order=lesson_order
+                    )
+                    
+                    # Create StudyNote object
+                    StudyNote.objects.create(
+                        lesson=notes_lesson,
+                        golden_notes=study_notes['golden_notes'],
+                        summaries=study_notes['summaries'],
+                        own_notes=study_notes['own_notes'],
+                        content=study_notes['content'],
+                        key_concepts=study_notes['key_concepts'],
+                        code_examples=study_notes['code_examples'],
+                        summary=study_notes['summary']
+                    )
                     
                     module_order += 1
             else:
@@ -693,19 +1043,39 @@ class CourseGenerationService:
                     video_id=video_id
                 )
                 
-                # Generate AI notes for the entire video
-                video_notes = self._generate_video_notes(
-                    video_title,
-                    video_info.get('description', '') if video_info else ''
-                )
-                
-                lesson = Lesson.objects.create(
+                # Create video lesson
+                video_lesson = Lesson.objects.create(
                     module=module,
                     title=video_title,
+                    lesson_type='video',
                     youtube_video_id=video_id,
-                    ai_notes=video_notes,
                     duration=video_info.get('duration', 0) if video_info else 0,
                     order=0
+                )
+                
+                # Create study notes lesson
+                study_notes = self.ai_service.generate_structured_study_notes(
+                    video_title, 
+                    video_info
+                )
+                
+                notes_lesson = Lesson.objects.create(
+                    module=module,
+                    title=f"📝 Study Notes - {video_title}",
+                    lesson_type='notes',
+                    order=1
+                )
+                
+                # Create StudyNote object
+                StudyNote.objects.create(
+                    lesson=notes_lesson,
+                    golden_notes=study_notes['golden_notes'],
+                    summaries=study_notes['summaries'],
+                    own_notes=study_notes['own_notes'],
+                    content=study_notes['content'],
+                    key_concepts=study_notes['key_concepts'],
+                    code_examples=study_notes['code_examples'],
+                    summary=study_notes['summary']
                 )
                 
                 module_order += 1
@@ -779,7 +1149,7 @@ class CourseGenerationService:
             return f"AI-generated notes for {chapter_title} from {video_title}. This chapter covers important concepts and provides valuable insights."
     
     def _generate_single_video_course(self, video_id, topic, difficulty):
-        """Generate course from single YouTube video"""
+        """Generate course from single YouTube video with optimized structure"""
         video_info = self.youtube_service.get_video_info(video_id)
         
         if not video_info:
@@ -810,8 +1180,8 @@ class CourseGenerationService:
         )
         
         if chapters:
-            # Structure chapters into modules based on duration
-            modules = self._structure_chapters_into_modules(chapters, video_id, video_info)
+            # Structure chapters into modules with study notes
+            modules = self._structure_chapters_with_study_notes(chapters, video_id, video_info)
             
             # Create modules and lessons
             for module_data in modules:
@@ -821,16 +1191,46 @@ class CourseGenerationService:
                     order=module_data['order']
                 )
                 
+                lesson_order = 0
                 for lesson_data in module_data['lessons']:
-                    lesson = Lesson.objects.create(
+                    # Create video lesson
+                    video_lesson = Lesson.objects.create(
                         module=module,
                         title=lesson_data['title'],
+                        lesson_type='video',
                         youtube_video_id=video_id,
-                        ai_notes=lesson_data.get('ai_notes', ''),
                         duration=lesson_data.get('duration', 0),
-                        order=lesson_data.get('order', 0),
+                        order=lesson_order,
                         chapter_timestamp=lesson_data.get('chapter_timestamp', '')
                     )
+                    lesson_order += 1
+                
+                # Create ONE study notes lesson per module (combining all lessons)
+                module_title = module_data['title'].replace('Module ', '').replace(':', '')
+                study_notes = self.ai_service.generate_structured_study_notes(
+                    f"Complete {module_title} Study Guide", 
+                    video_info, 
+                    {'title': module_title, 'lessons': module_data['lessons']}
+                )
+                
+                notes_lesson = Lesson.objects.create(
+                    module=module,
+                    title=f"📝 Complete Study Notes - {module_title}",
+                    lesson_type='notes',
+                    order=lesson_order
+                )
+                
+                # Create StudyNote object
+                StudyNote.objects.create(
+                    lesson=notes_lesson,
+                    golden_notes=study_notes['golden_notes'],
+                    summaries=study_notes['summaries'],
+                    own_notes=study_notes['own_notes'],
+                    content=study_notes['content'],
+                    key_concepts=study_notes['key_concepts'],
+                    code_examples=study_notes['code_examples'],
+                    summary=study_notes['summary']
+                )
         else:
             # No chapters found, generate AI course structure
             course_structure = self.ai_service.generate_course_structure(
@@ -850,26 +1250,105 @@ class CourseGenerationService:
                     order=module_data.get('order', 0)
                 )
                 
+                lesson_order = 0
                 for lesson_data in module_data['lessons']:
-                    lesson = Lesson.objects.create(
+                    # Create video lesson
+                    video_lesson = Lesson.objects.create(
                         module=module,
                         title=lesson_data['title'],
+                        lesson_type='video',
                         youtube_video_id=video_id,
-                        ai_notes=lesson_data.get('ai_notes', ''),
                         duration=lesson_data.get('duration', 0),
-                        order=lesson_data.get('order', 0)
+                        order=lesson_order
+                    )
+                    lesson_order += 1
+                
+                # Create ONE study notes lesson per module
+                study_notes = self.ai_service.generate_structured_study_notes(
+                    f"Complete {module_data['title']} Study Guide", 
+                    video_info
+                )
+                
+                notes_lesson = Lesson.objects.create(
+                    module=module,
+                    title=f"📝 Complete Study Notes - {module_data['title']}",
+                    lesson_type='notes',
+                    order=lesson_order
+                )
+                
+                # Create StudyNote object
+                StudyNote.objects.create(
+                    lesson=notes_lesson,
+                    golden_notes=study_notes['golden_notes'],
+                    summaries=study_notes['summaries'],
+                    own_notes=study_notes['own_notes'],
+                    content=study_notes['content'],
+                    key_concepts=study_notes['key_concepts'],
+                    code_examples=study_notes['code_examples'],
+                    summary=study_notes['summary']
+                )
+                
+                # Create quiz if questions provided
+                quiz_questions = lesson_data.get('quiz_questions', [])
+                if quiz_questions:
+                    quiz_lesson = Lesson.objects.create(
+                        module=module,
+                        title=f"Quiz - {module_data['title']}",
+                        lesson_type='quiz',
+                        order=lesson_order + 1
                     )
                     
-                    # Create quiz if questions provided
-                    quiz_questions = lesson_data.get('quiz_questions', [])
-                    if quiz_questions:
-                        quiz = Quiz.objects.create(
-                            lesson=lesson,
-                            questions=quiz_questions
-                        )
+                    quiz = Quiz.objects.create(
+                        lesson=quiz_lesson,
+                        questions=quiz_questions
+                    )
         
         return course
 
+    def _structure_chapters_with_study_notes(self, chapters, video_id, video_info):
+        """Structure chapters into modules with study notes - optimized version"""
+        modules = []
+        current_module = {
+            'title': '',
+            'order': 0,
+            'lessons': [],
+            'total_duration': 0
+        }
+        
+        for i, chapter in enumerate(chapters):
+            duration = chapter.get('seconds', 0)
+            title = chapter['title']
+            
+            # Simplified module structure for faster generation
+            if len(current_module['lessons']) >= 3:  # Max 3 lessons per module
+                # Finalize current module
+                if current_module['lessons']:
+                    modules.append(current_module)
+                
+                # Start new module
+                current_module = {
+                    'title': f"Module {len(modules) + 1}: {title}",
+                    'order': len(modules),
+                    'lessons': [],
+                    'total_duration': 0
+                }
+            
+            # Add lesson to current module (no AI notes generation here - will be done later)
+            current_module['lessons'].append({
+                'title': title,
+                'youtube_video_id': video_id,
+                'duration': duration,
+                'order': len(current_module['lessons']),
+                'chapter_timestamp': chapter['timestamp']
+            })
+            current_module['total_duration'] += duration
+        
+        # Add the last module if it has lessons
+        if current_module['lessons']:
+            modules.append(current_module)
+        
+        return modules
+    
     def _structure_chapters_into_modules(self, chapters, video_id, video_info):
         """Structure chapters into modules based on duration and type"""
         modules = []
