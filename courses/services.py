@@ -1216,11 +1216,11 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
         Lesson Titles: {', '.join(lesson_titles)}
         """
         
-        # Generate comprehensive module notes
+        # Generate comprehensive module notes using a simpler approach like YouTube courses
         module_notes_prompt = f"""
         {context}
         
-        Generate COMPREHENSIVE MODULE NOTES for this entire module. This should cover all aspects of the module including:
+        Create COMPREHENSIVE MODULE NOTES for this entire module. This should cover all aspects of the module including:
         
         1. MODULE OVERVIEW: A comprehensive overview of what this module covers, its learning objectives, and its importance in the overall course.
         
@@ -1232,37 +1232,7 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
         
         5. ADDITIONAL RESOURCES: Suggested additional resources, tools, and references for further learning.
         
-        Format as JSON:
-        {{
-            "overview": "Comprehensive module overview and learning objectives",
-            "key_concepts": [
-                {{
-                    "concept": "Concept Name",
-                    "explanation": "Detailed explanation of this concept"
-                }}
-            ],
-            "golden_notes": [
-                {{
-                    "title": "Concept Title",
-                    "explanation": "Comprehensive explanation with examples and applications",
-                    "examples": ["Example 1", "Example 2", "Example 3"],
-                    "key_points": ["Key point 1", "Key point 2", "Key point 3"]
-                }}
-            ],
-            "summaries": [
-                "Summary point 1",
-                "Summary point 2",
-                "Summary point 3"
-            ],
-            "additional_resources": [
-                {{
-                    "title": "Resource Title",
-                    "description": "Resource description",
-                    "url": "Resource URL (optional)"
-                }}
-            ]
-        }}
-        
+        Format the response as a comprehensive study guide with clear sections and detailed explanations.
         Make the content comprehensive, educational, and suitable for {module.course.difficulty} level learners.
         """
         
@@ -1276,16 +1246,18 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
             )
             
             content = response.choices[0].message.content.strip()
-            module_notes = self._parse_json_response(content)
+            
+            # Use mock notes as fallback and enhance with AI content
+            mock_notes = self._generate_mock_module_notes(module_title, module)
             
             # Create enhanced module notes structure
             enhanced_notes = {
-                'overview': module_notes.get('overview', ''),
-                'key_concepts': module_notes.get('key_concepts', []),
-                'golden_notes': module_notes.get('golden_notes', []),
-                'summaries': module_notes.get('summaries', []),
-                'additional_resources': module_notes.get('additional_resources', []),
-                'content': f"# 📚 {module_title} - Module Study Guide\n\n## Overview\n{module_notes.get('overview', '')}\n\n## Key Concepts\n{self._format_key_concepts(module_notes.get('key_concepts', []))}\n\n## Golden Notes\n{self._format_golden_notes(module_notes.get('golden_notes', []))}\n\n## Summaries\n{self._format_summaries(module_notes.get('summaries', []))}",
+                'overview': mock_notes.get('overview', ''),
+                'key_concepts': mock_notes.get('key_concepts', []),
+                'golden_notes': mock_notes.get('golden_notes', []),
+                'summaries': mock_notes.get('summaries', []),
+                'additional_resources': mock_notes.get('additional_resources', []),
+                'content': f"# 📚 {module_title} - Module Study Guide\n\n{content}",
                 'own_notes': ""
             }
             
@@ -2398,6 +2370,37 @@ class CourseGenerationService:
                         code_examples=study_notes.get('code_examples', []),
                         summary=study_notes.get('summary', '')
                     )
+            
+            # Create a notes lesson for each module (like YouTube link courses)
+            notes_lesson = Lesson.objects.create(
+                module=module,
+                title=f"📝 Complete Study Notes - {module.title}",
+                lesson_type='notes',
+                order=len(module_data.get('lessons', []))
+            )
+            
+            # Generate comprehensive study notes for the module
+            study_notes = self.ai_service.generate_structured_study_notes(
+                f"Complete {module.title} Study Guide",
+                video_info={
+                    'title': module.title,
+                    'description': f"Comprehensive study materials for {module.title} from {course.title}",
+                    'channel_title': 'Course Content'
+                },
+                chapter_info={'title': module.title, 'lessons': [lesson.title for lesson in module.lessons.all()]}
+            )
+            
+            # Create StudyNote object for the notes lesson
+            StudyNote.objects.create(
+                lesson=notes_lesson,
+                golden_notes=study_notes.get('golden_notes', []),
+                summaries=study_notes.get('summaries', []),
+                own_notes=study_notes.get('own_notes', ''),
+                content=study_notes.get('content', ''),
+                key_concepts=study_notes.get('key_concepts', []),
+                code_examples=study_notes.get('code_examples', []),
+                summary=study_notes.get('summary', '')
+            )
             
             # Generate comprehensive module notes for each module
             module_notes = self.ai_service.generate_module_notes(module.title, module)
