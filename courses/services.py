@@ -745,12 +745,19 @@ class AIService:
                 context += f"\nDescription: {video_info['description'][:500]}..."
         
         # If this is a module with multiple lessons, include lesson information
-        if chapter_info and chapter_info.get('lessons'):
+        if chapter_info and isinstance(chapter_info, dict) and chapter_info.get('lessons'):
             context += f"\n\nThis module contains the following lessons:"
             for i, lesson in enumerate(chapter_info['lessons'], 1):
-                context += f"\n{i}. {lesson.get('title', 'Unknown lesson')}"
-                if lesson.get('chapter_timestamp'):
-                    context += f" (starts at {lesson['chapter_timestamp']})"
+                if isinstance(lesson, dict):
+                    lesson_title = lesson.get('title', 'Unknown lesson')
+                    timestamp = lesson.get('chapter_timestamp', '')
+                else:
+                    lesson_title = str(lesson)
+                    timestamp = ''
+                
+                context += f"\n{i}. {lesson_title}"
+                if timestamp:
+                    context += f" (starts at {timestamp})"
         
         # Add transcript to context for dynamic generation
         if transcript:
@@ -2387,7 +2394,7 @@ class CourseGenerationService:
                     'description': f"Comprehensive study materials for {module.title} from {course.title}",
                     'channel_title': 'Course Content'
                 },
-                chapter_info={'title': module.title, 'lessons': [lesson.title for lesson in module.lessons.all()]}
+                chapter_info={'title': module.title, 'lessons': [{'title': lesson.title} for lesson in module.lessons.all()]}
             )
             
             # Create StudyNote object for the notes lesson
