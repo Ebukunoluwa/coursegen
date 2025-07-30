@@ -286,8 +286,10 @@ class YouTubeService:
                 f"{search_term} tutorial",
                 # Strategy 3: Add "explained" for detailed explanations
                 f"{search_term} explained",
-                # Strategy 4: Add "complete guide" for comprehensive content
-                f"{search_term} complete guide"
+                # Strategy 4: Add "for beginners" for beginner-friendly content
+                f"{search_term} for beginners",
+                # Strategy 5: Just the main topic for broader results
+                search_term.split()[0] if len(search_term.split()) > 1 else search_term
             ]
             
             all_videos = []
@@ -330,16 +332,18 @@ class YouTubeService:
                     seen_videos.add(video['video_id'])
                     unique_videos.append(video)
             
-            # Sort by relevance (exact matches first, then tutorial, explained, complete guide)
+            # Sort by relevance (exact matches first, then tutorial, explained, for beginners, main topic)
             def relevance_score(video):
                 strategy = video.get('search_strategy', '')
                 if strategy == search_term:
-                    return 4
+                    return 5
                 elif 'tutorial' in strategy:
-                    return 3
+                    return 4
                 elif 'explained' in strategy:
+                    return 3
+                elif 'for beginners' in strategy:
                     return 2
-                elif 'complete guide' in strategy:
+                elif len(strategy.split()) == 1:  # Single word searches
                     return 1
                 return 0
             
@@ -1477,7 +1481,7 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
                             "description": "Comprehensive introduction to the subject matter covering all fundamental concepts, key terminology, learning objectives, and course roadmap. Students will understand the scope, importance, and practical applications of this field.",
                             "type": "video",
                             "duration": 2400,
-                            "youtube_search_term": f"{prompt} complete introduction tutorial for beginners",
+                            "youtube_search_term": f"{prompt} introduction tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Complete Introduction Video",
@@ -1489,7 +1493,7 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
                             "description": "Deep dive into the core principles, fundamental concepts, and essential building blocks. Students will master the foundational knowledge required for all advanced topics and practical applications.",
                             "type": "video",
                             "duration": 2700,
-                            "youtube_search_term": f"{prompt} core principles fundamentals explained",
+                            "youtube_search_term": f"{prompt} basics tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Core Principles Video",
@@ -1501,7 +1505,7 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
                             "description": "Comprehensive overview of all essential tools, technologies, software, and platforms used in this field. Students will learn to set up their development environment and understand industry-standard tools.",
                             "type": "video",
                             "duration": 2100,
-                            "youtube_search_term": f"{prompt} essential tools technologies tutorial",
+                            "youtube_search_term": f"{prompt} tools tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Essential Tools Video",
@@ -1519,7 +1523,7 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
                             "description": "Comprehensive coverage of advanced techniques, methodologies, and best practices. Students will learn sophisticated approaches and industry-standard methods for solving complex problems.",
                             "type": "video",
                             "duration": 3000,
-                            "youtube_search_term": f"{prompt} advanced techniques methods tutorial",
+                            "youtube_search_term": f"{prompt} advanced tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Advanced Techniques Video",
@@ -1531,7 +1535,7 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
                             "description": "Hands-on practical applications with real-world examples, case studies, and industry scenarios. Students will apply their knowledge to solve actual problems and understand practical implementation.",
                             "type": "video",
                             "duration": 3300,
-                            "youtube_search_term": f"{prompt} practical applications real world examples tutorial",
+                            "youtube_search_term": f"{prompt} examples tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Practical Applications Video",
@@ -1543,7 +1547,7 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
                             "description": "Comprehensive problem-solving strategies, troubleshooting techniques, and debugging methods. Students will learn to identify, analyze, and resolve common issues and challenges.",
                             "type": "video",
                             "duration": 2400,
-                            "youtube_search_term": f"{prompt} problem solving troubleshooting tutorial",
+                            "youtube_search_term": f"{prompt} problems tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Problem-Solving Video",
@@ -1561,7 +1565,7 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
                             "description": "Master-level techniques, advanced strategies, and expert approaches used by industry professionals. Students will learn sophisticated methods for complex scenarios and high-performance applications.",
                             "type": "video",
                             "duration": 3600,
-                            "youtube_search_term": f"{prompt} expert level techniques strategies tutorial",
+                            "youtube_search_term": f"{prompt} expert tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Expert Techniques Video",
@@ -1573,7 +1577,7 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
                             "description": "Comprehensive optimization techniques, performance enhancement strategies, and industry best practices. Students will learn to maximize efficiency, improve performance, and implement professional standards.",
                             "type": "video",
                             "duration": 3000,
-                            "youtube_search_term": f"{prompt} performance optimization best practices tutorial",
+                            "youtube_search_term": f"{prompt} optimization tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Optimization Video",
@@ -1585,7 +1589,7 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
                             "description": "Industry standards, professional development strategies, and career advancement techniques. Students will understand professional requirements, industry expectations, and career growth opportunities.",
                             "type": "video",
                             "duration": 2700,
-                            "youtube_search_term": f"{prompt} industry standards professional development tutorial",
+                            "youtube_search_term": f"{prompt} professional tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Industry Standards Video",
@@ -1603,7 +1607,7 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
                             "description": "Comprehensive real-world project covering all aspects from planning to deployment. Students will build a complete, professional-level application using all learned concepts and techniques.",
                             "type": "video",
                             "duration": 4200,
-                            "youtube_search_term": f"{prompt} complete real world project tutorial",
+                            "youtube_search_term": f"{prompt} project tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Real-World Project Video",
@@ -1615,7 +1619,7 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
                             "description": "Advanced case studies, complex scenarios, and challenging applications. Students will analyze and solve sophisticated problems using advanced techniques and professional methodologies.",
                             "type": "video",
                             "duration": 3600,
-                            "youtube_search_term": f"{prompt} advanced case studies complex scenarios tutorial",
+                            "youtube_search_term": f"{prompt} case studies tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Advanced Case Studies Video",
@@ -1627,7 +1631,7 @@ This module covers the essential concepts of {lesson_title.lower()}. Understandi
                             "description": "Comprehensive final assessment, portfolio development, and mastery demonstration. Students will showcase their complete understanding and professional capabilities through comprehensive evaluation.",
                             "type": "video",
                             "duration": 3000,
-                            "youtube_search_term": f"{prompt} final mastery assessment portfolio tutorial",
+                            "youtube_search_term": f"{prompt} mastery tutorial",
                             "chapter_timestamp": "00:00",
                             "video_info": {
                                 "title": "Final Assessment Video",
